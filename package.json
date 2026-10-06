@@ -1,0 +1,8 @@
+{
+  "name": "apartmani-guest-app",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev"
+  }
+}

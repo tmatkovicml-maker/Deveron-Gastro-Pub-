@@ -1,0 +1,17 @@
+# Cloudflare Worker for the apartment guest app (deployed by Cloudflare Workers Builds
+# from this repository). Set the host PIN once in the dashboard:
+#   Workers & Pages → apartmani → Settings → Variables and Secrets →
+#   Add → type "Secret", name ADMIN_PIN
+name = "apartmani"
+main = "src/index.js"
+compatibility_date = "2025-09-01"
+# Keep variables set in the dashboard (ADMIN_PIN) when Cloudflare redeploys from GitHub
+keep_vars = true
+
+[[durable_objects.bindings]]
+name = "STORE"
+class_name = "Store"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Store"]
