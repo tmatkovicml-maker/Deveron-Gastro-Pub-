@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="hr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<title>Moja čišćenja</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #f2f6f5; --card: #fff; --fg: #17302b; --muted: #58706b; --line: #d9e3e0; --input: #f8fbfa;
+    --brand: #1f7a68; --ok: #2a7d4f; --okbg: #e3f3e9; --warn: #b5541c; --warnbg: #fdeee2; --err: #b3261e; --errbg: #fbe9e7; --grey: #e8eeec;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #0e1917; --card: #16241f; --fg: #e5efed; --muted: #94aaa5; --line: #29403a; --input: #111e1b;
+      --brand: #5cc7ae; --ok: #6fd39a; --okbg: #163326; --warn: #f2a46b; --warnbg: #3a2416; --err: #ff8a80; --errbg: #3a1a18; --grey: #20302c; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  button, input, textarea { font: inherit; color: inherit; }
+  .wrap { max-width: 640px; margin: 0 auto; padding: 0 16px; }
+  header { background: var(--brand); color: #fff; padding: 14px 0; }
+  @media (prefers-color-scheme: dark) { header { background: #154a3f; } }
+  header b { font-size: 1.15rem; }
+  header .sub { opacity: .85; font-size: .9rem; }
+  main { padding: 8px 0 60px; }
+  h2 { font-size: 1rem; margin: 20px 0 8px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px; margin-bottom: 10px; }
+  .card.done { opacity: .75; }
+  .top { display: flex; justify-content: space-between; gap: 8px; align-items: flex-start; cursor: pointer; }
+  .name { font-weight: 700; font-size: 1.1rem; }
+  .muted { color: var(--muted); }
+  .small { font-size: .88rem; }
+  .badge { display: inline-block; border-radius: 999px; padding: 2px 10px; font-size: .8rem; font-weight: 700; white-space: nowrap; }
+  .b-hot { background: var(--errbg); color: var(--err); }
+  .b-todo { background: var(--warnbg); color: var(--warn); }
+  .b-ok { background: var(--okbg); color: var(--ok); }
+  .b-wait { background: var(--grey); color: var(--muted); }
+  .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: 0; border-radius: 10px; padding: 10px 16px;
+    background: var(--brand); color: #fff; font-weight: 700; cursor: pointer; min-height: 46px; text-decoration: none; }
+  @media (prefers-color-scheme: dark) { .btn { color: #0e1917; } }
+  .btn.ghost { background: transparent; color: var(--brand); border: 1px solid var(--brand); }
+  .btn.ok { background: var(--ok); }
+  .btn.wide { width: 100%; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .box { background: var(--input); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; margin-top: 10px; white-space: pre-wrap; }
+  .box.key { border-color: var(--warn); }
+  .checklist { margin-top: 12px; }
+  .checklist h4 { margin: 14px 0 4px; font-size: .95rem; }
+  .checklist label { display: flex; gap: 12px; align-items: flex-start; padding: 9px 4px; border-bottom: 1px solid var(--line); cursor: pointer; }
+  .checklist input { width: 22px; height: 22px; flex: none; margin: 0; accent-color: var(--ok); }
+  .checklist label.on span { color: var(--muted); text-decoration: line-through; }
+  .progress { height: 8px; background: var(--grey); border-radius: 99px; overflow: hidden; margin-top: 8px; }
+  .progress i { display: block; height: 100%; background: var(--ok); }
+  label.f { display: block; font-size: .88rem; color: var(--muted); margin-top: 12px; }
+  textarea { width: 100%; margin-top: 4px; padding: 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--input); min-height: 70px; resize: vertical; }
+  .toast { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); background: #17302b; color: #fff; padding: 10px 16px; border-radius: 10px; z-index: 50; }
+  .center { text-align: center; padding: 18vh 16px; }
+</style>
+</head>
+<body>
+<div id="app"><p class="center muted">Učitavanje…</p></div>
+<script>
+const token = location.pathname.split('/')[2];
+const TYPES = { turnover: 'Izlazno čišćenje', mid: 'Međučišćenje', deep: 'Generalno čišćenje', other: 'Ostalo' };
+const DAYS = ['nedjelja', 'ponedjeljak', 'utorak', 'srijeda', 'četvrtak', 'petak', 'subota'];
+const app = document.getElementById('app');
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const addDays = (day, n) => { const d = new Date(day + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+const dm = d => `${+d.slice(8, 10)}.${+d.slice(5, 7)}.`;
+const clock = ts => new Date(ts).toLocaleTimeString('hr-HR', { hour: '2-digit', minute: '2-digit' });
+let D = null, open = +sessionStorage.getItem('open') || null, busy = false;
+const drafts = {};   // unsent notes per job, kept while the page re-renders
+
+function toast(msg) {
+  const el = document.createElement('div'); el.className = 'toast'; el.textContent = msg; document.body.appendChild(el);
+  setTimeout(() => el.remove(), 2200);
+}
+async function load() {
+  try {
+    const r = await fetch('/api/r/' + token);
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      app.innerHTML = `<p class="center">${r.status === 404 ? 'Ovaj link više ne vrijedi. Javite se poslodavcu za novi.' : r.status === 429 ? 'Previše pokušaja. Pokušajte za sat vremena.' : 'Greška. Pokušajte ponovno.'}</p>`;
+      return;
+    }
+    D = d; render();
+  } catch { toast('Nema interneta'); }
+}
+async function act(id, action, data) {
+  if (busy) return false;
+  busy = true;
+  try {
+    const r = await fetch(`/api/r/${token}/jobs/${id}/${action}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data || {}) });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      toast({ taken: 'Netko je već preuzeo ovaj posao.', too_late: 'Više se ne može poništiti.', done: 'Posao je već završen.', not_yours: 'Posao je dodijeljen drugoj osobi.' }[d.error] || 'Greška – pokušajte ponovno.');
+      await load();
+      return false;
+    }
+    return true;
+  } catch { toast('Nema interneta – pokušajte ponovno.'); return false; }
+  finally { busy = false; }
+}
+
+function dayTitle(d) {
+  const t = D.today;
+  if (d < addDays(t, -1)) return 'Zaostalo';
+  const name = d === t ? 'Danas' : d === addDays(t, 1) ? 'Sutra' : d === addDays(t, -1) ? 'Jučer' : DAYS[new Date(d + 'T12:00:00Z').getUTCDay()];
+  return `${name} · ${dm(d)}`;
+}
+function windowTags(j) {
+  const a = j.apt, tags = [];
+  if (j.next_in === j.date) tags.push(`<span class="badge b-hot">⚡ Isti dan dolaze gosti${a.checkin ? ' u ' + esc(a.checkin) : ''}</span>`);
+  else if (j.next_in) tags.push(`<span class="badge b-wait">Sljedeći dolazak ${dm(j.next_in)}</span>`);
+  if (a.checkout && j.type === 'turnover') tags.push(`<span class="badge b-wait">Odjava ${esc(a.checkout)}</span>`);
+  if (j.time) tags.push(`<span class="badge b-todo">⏰ ${esc(j.time)}</span>`);
+  if (j.guests) tags.push(`<span class="badge b-wait">🛏 za ${j.guests} os.</span>`);
+  return tags.join('');
+}
+function state(j) {
+  if (j.status === 'done') return '<span class="badge b-ok">✓ Gotovo</span>';
+  if (!j.mine) return '<span class="badge b-todo">Slobodno</span>';
+  if (j.started) return '<span class="badge b-todo">U tijeku</span>';
+  return '';
+}
+
+function render() {
+  const mine = D.jobs.filter(j => j.mine), free = D.jobs.filter(j => !j.mine);
+  const h = Math.floor(D.month.minutes / 60), min = D.month.minutes % 60;
+  let html = `<header><div class="wrap"><b>🧹 Bok, ${esc(D.cleaner.name)}!</b>
+    <div class="sub">Ovaj mjesec: ${D.month.n} čišćenja${D.month.minutes ? ` · ${h} h ${min} min` : ''}</div></div></header><main class="wrap">`;
+  if (!mine.length) html += '<p class="muted" style="margin-top:20px">Nemate dodijeljenih čišćenja u sljedeća dva tjedna.</p>';
+  let last = '';
+  for (const j of mine) {
+    const t = dayTitle(j.date);
+    if (t !== last) { html += `<h2>${esc(t)}</h2>`; last = t; }
+    html += card(j);
+  }
+  if (free.length) {
+    html += `<h2>🙋 Slobodni poslovi</h2><p class="muted small">Nitko ih još nije preuzeo. Adresa i ulaz vide se kad posao preuzmete.</p>`;
+    html += free.map(card).join('');
+  }
+  html += `<div class="row"><button class="btn ghost" onclick="load()">🔄 Osvježi</button>
+    <a class="btn ghost" href="webcal://${location.host}/r/${token}.ics">📅 Dodaj u kalendar mobitela</a></div>
+    ${D.company.phone ? `<p class="muted small">Pitanja: <a href="tel:${esc(D.company.phone.replace(/\s/g, ''))}">${esc(D.company.phone)}</a>${D.company.name ? ' · ' + esc(D.company.name) : ''}</p>` : ''}</main>`;
+  app.innerHTML = html;
+}
+
+function card(j) {
+  const a = j.apt, isOpen = open === j.id;
+  let h = `<div class="card${j.status === 'done' ? ' done' : ''}" id="job-${j.id}"><div class="top" onclick="toggle(${j.id})">
+    <div><div class="name">${esc(a.name)}</div><div class="muted small">${TYPES[j.type] || ''}${a.minutes ? ` · oko ${a.minutes} min` : ''}${!j.mine ? ' · ' + dm(j.date) : ''}</div></div>
+    <div>${state(j)} <span class="muted">${isOpen ? '▲' : '▼'}</span></div></div>
+    <div class="tags">${windowTags(j)}</div>`;
+  if (!isOpen) return h + '</div>';
+  if (!j.mine) {
+    return h + `${a.address ? `<div class="box">📍 ${esc(a.address)}</div>` : ''}
+      <div class="row"><button class="btn wide" onclick="take(${j.id})">🙋 Preuzimam ovaj posao</button></div></div>`;
+  }
+  if (a.address || a.map) h += `<div class="box">📍 ${esc(a.address)}${a.map ? `<div class="row" style="margin-top:8px"><a class="btn ghost" href="${esc(a.map)}" target="_blank" rel="noopener">🗺 Navigacija</a></div>` : ''}</div>`;
+  if (a.access) h += `<div class="box key">🔑 <b>Ulaz:</b>\n${esc(a.access)}</div>`;
+  if (j.note) h += `<div class="box">📝 <b>Napomena za ovaj posao:</b>\n${esc(j.note)}</div>`;
+  if (a.info) h += `<div class="box">ℹ️ ${esc(a.info)}</div>`;
+
+  const items = a.checklist.filter(x => !x.startsWith('#'));
+  const done = j.checks.filter(x => items.includes(x)).length;
+  const locked = j.status === 'done';
+  if (items.length) {
+    h += `<div class="progress"><i style="width:${Math.round(done / items.length * 100)}%"></i></div><div class="muted small" style="margin-top:4px">${done} / ${items.length} zadataka</div><div class="checklist">`;
+    for (const x of a.checklist) {
+      if (x.startsWith('#')) { h += `<h4>${esc(x.replace(/^#+\s*/, ''))}</h4>`; continue; }
+      const on = j.checks.includes(x);
+      h += `<label class="${on ? 'on' : ''}"><input type="checkbox" ${on ? 'checked' : ''} ${locked ? 'disabled' : ''} data-job="${j.id}" data-item="${esc(x)}" onchange="tick(this)"><span>${esc(x)}</span></label>`;
+    }
+    h += '</div>';
+  }
+  if (locked) {
+    h += `<div class="box">✓ Gotovo u ${clock(j.finished)}${j.started && j.finished > j.started ? ` · ${Math.round((j.finished - j.started) / 60000)} min` : ''}
+${j.problem ? '⚠️ ' + esc(j.problem) + '\n' : ''}${j.report ? '📝 ' + esc(j.report) : ''}</div>`;
+    if (Date.now() - j.finished < D.undo_hours * 3600e3) h += `<div class="row"><button class="btn ghost" onclick="undo(${j.id})">↩️ Poništi „gotovo"</button></div>`;
+    return h + '</div>';
+  }
+  const dr = drafts[j.id] || { report: j.report, problem: j.problem };
+  if (!j.started) h += `<div class="row"><button class="btn wide ghost" onclick="start(${j.id})">▶️ Počinjem</button></div>`;
+  else h += `<p class="muted small">Počelo u ${clock(j.started)}</p>`;
+  h += `<label class="f">⚠️ Šteta, kvar ili nešto nedostaje? (vlasnik dobije obavijest)
+      <textarea id="problem-${j.id}" oninput="draft(${j.id})" placeholder="npr. razbijena čaša, ne radi klima, fali toaletni papir">${esc(dr.problem)}</textarea></label>
+    <label class="f">📝 Napomena (neobavezno)
+      <textarea id="report-${j.id}" oninput="draft(${j.id})" placeholder="npr. gosti ostavili punjač u ladici">${esc(dr.report)}</textarea></label>
+    <div class="row"><button class="btn ok wide" onclick="finish(${j.id})">✅ Gotovo – apartman očišćen</button></div></div>`;
+  return h;
+}
+
+function toggle(id) { open = open === id ? null : id; sessionStorage.setItem('open', open || ''); render(); if (open) document.getElementById('job-' + id).scrollIntoView({ block: 'start' }); }
+function draft(id) { drafts[id] = { report: document.getElementById('report-' + id).value, problem: document.getElementById('problem-' + id).value }; }
+async function take(id) { if (await act(id, 'take')) { toast('Posao je vaš 👍'); await load(); } }
+async function start(id) { if (await act(id, 'start')) await load(); }
+let saveTimer = null;
+function tick(el) {
+  const j = D.jobs.find(x => x.id === +el.dataset.job);
+  const item = el.dataset.item;
+  j.checks = el.checked ? [...j.checks, item] : j.checks.filter(x => x !== item);
+  if (!j.started) j.started = Date.now();
+  el.closest('label').classList.toggle('on', el.checked);
+  const items = j.apt.checklist.filter(x => !x.startsWith('#'));
+  const n = j.checks.filter(x => items.includes(x)).length;
+  const card = document.getElementById('job-' + j.id);
+  card.querySelector('.progress i').style.width = Math.round(n / items.length * 100) + '%';
+  card.querySelector('.progress + .muted').textContent = `${n} / ${items.length} zadataka`;
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => saveChecks(j), 700);
+}
+async function saveChecks(j) {
+  try {
+    const r = await fetch(`/api/r/${token}/jobs/${j.id}/checks`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ checks: j.checks }) });
+    if (!r.ok) toast('Kvačice nisu spremljene – osvježite stranicu.');
+  } catch { toast('Nema interneta – kvačice nisu spremljene.'); }
+}
+async function finish(id) {
+  const j = D.jobs.find(x => x.id === id);
+  const items = j.apt.checklist.filter(x => !x.startsWith('#'));
+  const left = items.filter(x => !j.checks.includes(x)).length;
+  if (left && !confirm(`Još ${left} zadataka nije označeno. Svejedno završiti?`)) return;
+  clearTimeout(saveTimer);
+  if (items.length) await saveChecks(j);
+  const problem = document.getElementById('problem-' + id).value.trim(), report = document.getElementById('report-' + id).value.trim();
+  if (await act(id, 'finish', { problem, report })) { delete drafts[id]; toast('Hvala! ✅'); await load(); }
+}
+async function undo(id) {
+  if (!confirm('Vratiti posao u „nije gotovo"?')) return;
+  if (await act(id, 'undo')) await load();
+}
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && D && !Object.keys(drafts).length) load(); });
+load();
+</script>
+</body>
+</html>

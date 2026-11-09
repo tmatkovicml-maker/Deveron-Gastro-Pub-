@@ -1,0 +1,21 @@
+# Cloudflare Worker for the apartment cleaning business (deployed by Cloudflare Workers Builds
+# from this repository). Set the owner PIN once in the dashboard:
+#   Workers & Pages → ciscenje → Settings → Variables and Secrets →
+#   Add → type "Secret", name ADMIN_PIN
+name = "ciscenje"
+main = "src/index.js"
+compatibility_date = "2025-09-01"
+# Keep variables set in the dashboard (ADMIN_PIN, TELEGRAM_BOT_TOKEN) when Cloudflare redeploys from GitHub
+keep_vars = true
+
+[[durable_objects.bindings]]
+name = "STORE"
+class_name = "Store"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Store"]
+
+# Booking.com / Airbnb calendars are read every 30 minutes
+[triggers]
+crons = ["*/30 * * * *"]

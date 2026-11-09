@@ -1,0 +1,585 @@
+<!doctype html>
+<html lang="hr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<title>Čišćenje · administracija</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #f2f6f5; --card: #fff; --fg: #17302b; --muted: #58706b; --line: #d9e3e0; --input: #f8fbfa;
+    --brand: #1f7a68; --ok: #2a7d4f; --okbg: #e3f3e9; --warn: #b5541c; --warnbg: #fdeee2; --err: #b3261e; --errbg: #fbe9e7; --grey: #e8eeec;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #0e1917; --card: #16241f; --fg: #e5efed; --muted: #94aaa5; --line: #29403a; --input: #111e1b;
+      --brand: #5cc7ae; --ok: #6fd39a; --okbg: #163326; --warn: #f2a46b; --warnbg: #3a2416; --err: #ff8a80; --errbg: #3a1a18; --grey: #20302c; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  button, input, select, textarea { font: inherit; color: inherit; }
+  a { color: var(--brand); }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 0 16px; }
+  header { background: var(--brand); color: #fff; }
+  @media (prefers-color-scheme: dark) { header { background: #154a3f; } }
+  header .wrap { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-top: 12px; padding-bottom: 12px; }
+  header b { font-size: 1.1rem; }
+  header button { background: transparent; border: 1px solid rgba(255,255,255,.5); color: #fff; border-radius: 8px; padding: 4px 10px; cursor: pointer; }
+  nav.tabs { background: var(--card); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 5; }
+  nav.tabs .wrap { display: flex; gap: 2px; overflow-x: auto; }
+  nav.tabs button { flex: none; background: none; border: 0; border-bottom: 3px solid transparent; padding: 12px 10px; cursor: pointer; color: var(--muted); font-weight: 600; }
+  nav.tabs button.on { color: var(--brand); border-bottom-color: var(--brand); }
+  main { padding: 12px 0 60px; }
+  h2 { font-size: 1.15rem; margin: 18px 0 10px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  h3 { margin: 0 0 4px; font-size: 1.05rem; }
+  .day { font-size: .95rem; margin: 20px 0 8px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; margin-bottom: 8px; }
+  .card.faded { opacity: .6; }
+  .muted { color: var(--muted); }
+  .small { font-size: .85rem; }
+  label { display: block; font-size: .85rem; color: var(--muted); margin-top: 8px; }
+  input, select, textarea { width: 100%; margin-top: 3px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--input); min-height: 40px; }
+  textarea { min-height: 80px; resize: vertical; }
+  input[type=checkbox] { width: auto; min-height: 0; margin: 0; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 0 12px; }
+  .btn { display: inline-flex; align-items: center; gap: 6px; border: 0; border-radius: 8px; padding: 8px 14px; background: var(--brand); color: #fff; font-weight: 600; cursor: pointer; min-height: 40px; text-decoration: none; }
+  @media (prefers-color-scheme: dark) { .btn { color: #0e1917; } }
+  .btn.ghost { background: transparent; color: var(--brand); border: 1px solid var(--brand); }
+  .btn.danger { background: transparent; color: var(--err); border: 1px solid var(--err); }
+  .btn.ok { background: var(--ok); }
+  .btn.sm { min-height: 32px; padding: 4px 10px; font-size: .85rem; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; align-items: center; }
+  .top { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; align-items: flex-start; }
+  .name { font-weight: 700; font-size: 1.05rem; }
+  .badge { display: inline-block; border-radius: 999px; padding: 2px 10px; font-size: .8rem; font-weight: 700; white-space: nowrap; }
+  .b-hot { background: var(--errbg); color: var(--err); }
+  .b-todo { background: var(--warnbg); color: var(--warn); }
+  .b-ok { background: var(--okbg); color: var(--ok); }
+  .b-wait { background: var(--grey); color: var(--muted); }
+  .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .inline-select { width: auto; min-height: 32px; padding: 3px 8px; margin: 0; font-size: .9rem; }
+  .problem { background: var(--errbg); color: var(--err); border-radius: 8px; padding: 8px 10px; margin-top: 8px; white-space: pre-wrap; }
+  .report { background: var(--input); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; margin-top: 8px; white-space: pre-wrap; }
+  .linkbox { word-break: break-all; background: var(--input); border: 1px dashed var(--line); border-radius: 8px; padding: 8px 10px; margin-top: 6px; font-family: ui-monospace, monospace; font-size: .85rem; }
+  table.list { width: 100%; border-collapse: collapse; }
+  table.list th, table.list td { text-align: left; padding: 7px 8px; border-top: 1px solid var(--line); font-size: .9rem; }
+  table.list th { color: var(--muted); font-weight: 600; border-top: 0; }
+  table.list td.n, table.list th.n { text-align: right; white-space: nowrap; }
+  table.list tr.total td { font-weight: 700; }
+  .scroll { overflow-x: auto; }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; }
+  .stat { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
+  .stat b { display: block; font-size: 1.4rem; }
+  .hint { background: var(--warnbg); border: 1px solid var(--warn); border-radius: 10px; padding: 10px 12px; margin-bottom: 10px; font-size: .9rem; }
+  .help { font-size: .82rem; color: var(--muted); margin-top: 4px; }
+  details summary { cursor: pointer; color: var(--brand); font-weight: 600; margin: 14px 0 8px; }
+  .toast { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); background: #17302b; color: #fff; padding: 10px 16px; border-radius: 10px; z-index: 60; box-shadow: 0 6px 20px rgba(0,0,0,.25); }
+  .login { max-width: 340px; margin: 12vh auto; text-align: center; }
+  .login input { text-align: center; font-size: 1.4rem; letter-spacing: .2em; }
+  .modal { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: grid; place-items: center; padding: 16px; z-index: 40; }
+  .modal > .card { max-width: 600px; width: 100%; max-height: 92vh; overflow: auto; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+const TYPES = { turnover: 'Izlazno čišćenje', mid: 'Međučišćenje', deep: 'Generalno čišćenje', other: 'Ostalo' };
+const DAYS = ['nedjelja', 'ponedjeljak', 'utorak', 'srijeda', 'četvrtak', 'petak', 'subota'];
+const MONTHS = ['siječanj', 'veljača', 'ožujak', 'travanj', 'svibanj', 'lipanj', 'srpanj', 'kolovoz', 'rujan', 'listopad', 'studeni', 'prosinac'];
+let pin = sessionStorage.getItem('pin') || '';
+let D = null, tab = sessionStorage.getItem('tab') || 'jobs', who = sessionStorage.getItem('who') || 'all', range = 21;
+let month = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Zagreb' }).slice(0, 7);
+const app = document.getElementById('app');
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const today = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Zagreb' });
+const addDays = (day, n) => { const d = new Date(day + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+const dm = d => `${+d.slice(8, 10)}.${+d.slice(5, 7)}.`;
+const fmt = d => d ? `${d.slice(8, 10)}.${d.slice(5, 7)}.${d.slice(0, 4)}.` : '';
+const clock = ts => new Date(ts).toLocaleTimeString('hr-HR', { hour: '2-digit', minute: '2-digit' });
+const eur = n => (Math.round((+n || 0) * 100) / 100).toLocaleString('hr-HR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+const apt = id => D.apts.find(a => a.id === id) || { name: '?', checklist: [] };
+const client = id => D.clients.find(c => c.id === id);
+const cleaner = id => D.cleaners.find(c => c.id === id);
+const jobMinutes = j => j.started && j.finished > j.started ? Math.round((j.finished - j.started) / 60000) : 0;
+const hm = min => `${Math.floor(min / 60)} h ${String(min % 60).padStart(2, '0')} min`;
+const cleanerLink = c => `${location.origin}/r/${c.token}`;
+// WhatsApp needs the number with the country code; 09x… is taken as a Croatian number
+function waLink(phone, text) {
+  let p = String(phone || '').replace(/[^\d+]/g, '');
+  if (p.startsWith('+')) p = p.slice(1); else if (p.startsWith('00')) p = p.slice(2); else if (p.startsWith('0')) p = '385' + p.slice(1);
+  return `https://wa.me/${p}?text=${encodeURIComponent(text)}`;
+}
+
+function toast(msg) {
+  const el = document.createElement('div'); el.className = 'toast'; el.textContent = msg; document.body.appendChild(el);
+  setTimeout(() => el.remove(), 2600);
+}
+async function api(path, opts = {}) {
+  const r = await fetch('/api/admin/' + path, {
+    method: opts.method || 'GET',
+    headers: { 'X-Admin-Pin': pin, ...(opts.body ? { 'Content-Type': 'application/json' } : {}) },
+    body: opts.body ? JSON.stringify(opts.body) : undefined,
+  });
+  const d = await r.json().catch(() => ({}));
+  if (r.status === 401) { pin = ''; sessionStorage.removeItem('pin'); showLogin('Pogrešan PIN.'); throw new Error('pin'); }
+  if (r.status === 429) { showLogin('Previše pokušaja. Pričekajte 15 minuta.'); throw new Error('many'); }
+  if (r.status === 503 && d.error === 'no_store') { showLogin('Baza nije povezana (Durable Object STORE). Worker mora biti postavljen iz repozitorija s datotekom wrangler.toml.'); throw new Error('nostore'); }
+  if (r.status === 503 && d.error === 'no_pin') { showLogin('PIN nije postavljen (ADMIN_PIN u Cloudflareu).'); throw new Error('nopin'); }
+  if (!r.ok) { toast(d.error === 'invalid' ? 'Provjerite unesene podatke.' : d.error === 'bad_token' ? 'Telegram token nije ispravan.' : d.error === 'no_token' ? 'TELEGRAM_BOT_TOKEN nije postavljen.' : 'Greška pri spremanju.'); throw new Error(d.error || 'err'); }
+  return d;
+}
+
+function showLogin(msg = '') {
+  app.innerHTML = `<div class="login card"><h3>🧹 Čišćenje apartmana</h3><p class="muted">Upišite PIN</p>
+    <form onsubmit="login(event)"><input type="password" id="pin" inputmode="numeric" autocomplete="current-password" autofocus>
+    <div class="row" style="justify-content:center"><button class="btn">Prijava</button></div></form>
+    <p style="color:var(--err)">${esc(msg)}</p></div>`;
+}
+async function login(e) {
+  e.preventDefault();
+  pin = document.getElementById('pin').value.trim();
+  sessionStorage.setItem('pin', pin);
+  await reload();
+}
+function logout() { pin = ''; sessionStorage.removeItem('pin'); showLogin(); }
+async function reload() {
+  try { D = await api('data'); } catch { return; }
+  render();
+}
+function setTab(t) { tab = t; sessionStorage.setItem('tab', t); scrollTo(0, 0); render(); }
+
+function render() {
+  const tabs = [['jobs', '📋 Raspored'], ['apts', '🏠 Objekti'], ['clients', '👤 Klijenti'], ['team', '🧹 Ekipa'], ['money', '💶 Obračun'], ['settings', '⚙️ Postavke']];
+  let h = `<header><div class="wrap"><b>🧹 ${esc(D.company.name || 'Čišćenje apartmana')}</b><button onclick="logout()">Odjava</button></div></header>
+    <nav class="tabs"><div class="wrap">${tabs.map(([k, v]) => `<button class="${tab === k ? 'on' : ''}" onclick="setTab('${k}')">${v}</button>`).join('')}</div></nav>
+    <main class="wrap">`;
+  h += { jobs: jobsTab, apts: aptsTab, clients: clientsTab, team: teamTab, money: moneyTab, settings: settingsTab }[tab]();
+  app.innerHTML = h + '</main>';
+}
+
+// ---------- modal forms ----------
+function modal(title, inner, onSave, saveLabel = '💾 Spremi') {
+  const m = document.createElement('div');
+  m.className = 'modal';
+  m.innerHTML = `<div class="card"><h3>${title}</h3>${inner}
+    <div class="row">${onSave ? `<button class="btn" id="m-save">${saveLabel}</button>` : ''}<button class="btn ghost" id="m-close">${onSave ? 'Odustani' : 'Zatvori'}</button></div></div>`;
+  document.body.appendChild(m);
+  m.querySelector('#m-close').onclick = () => m.remove();
+  if (onSave) m.querySelector('#m-save').onclick = async () => {
+    try { if (await onSave(m) !== false) m.remove(); } catch {}
+  };
+  return m;
+}
+const val = (m, id) => m.querySelector('#' + id).value;
+const opt = (list, sel, empty) => (empty !== undefined ? `<option value="">${esc(empty)}</option>` : '') +
+  list.map(([v, t]) => `<option value="${esc(v)}"${String(v) === String(sel ?? '') ? ' selected' : ''}>${esc(t)}</option>`).join('');
+const activeCleaners = () => D.cleaners.filter(c => c.active);
+
+// ---------- schedule ----------
+function jobTags(j) {
+  const a = apt(j.apt_id), tags = [`<span class="badge b-wait">${TYPES[j.type]}</span>`];
+  if (j.status === 'planned' && j.next_in === j.date) tags.push(`<span class="badge b-hot">⚡ isti dan dolazak${a.checkin ? ' ' + esc(a.checkin) : ''}</span>`);
+  else if (j.status === 'planned' && j.next_in) tags.push(`<span class="badge b-wait">sljedeći dolazak ${dm(j.next_in)}</span>`);
+  if (j.time) tags.push(`<span class="badge b-todo">⏰ ${esc(j.time)}</span>`);
+  else if (a.checkout && j.type === 'turnover') tags.push(`<span class="badge b-wait">odjava ${esc(a.checkout)}</span>`);
+  if (j.guests) tags.push(`<span class="badge b-wait">🛏 ${j.guests} os.</span>`);
+  if (j.source === 'ical') tags.push('<span class="badge b-wait" title="Iz kalendara Booking/Airbnb">📅</span>');
+  return tags.join('');
+}
+function jobState(j) {
+  if (j.status === 'cancelled') return `<span class="badge b-wait">Otkazano${j.cancel_by === 'sync' ? ' (nema u kalendaru)' : ''}</span>`;
+  if (j.status === 'done') return `<span class="badge b-ok">✓ Očišćeno${j.finished ? ' ' + clock(j.finished) : ''}</span>`;
+  if (j.started) return '<span class="badge b-todo">U tijeku</span>';
+  if (!j.cleaner_id) return '<span class="badge b-hot">Nitko nije preuzeo</span>';
+  return '';
+}
+function jobCard(j) {
+  const a = apt(j.apt_id), c = client(a.client_id);
+  const cl = cleaner(j.cleaner_id);
+  let h = `<div class="card${j.status === 'cancelled' ? ' faded' : ''}"><div class="top">
+    <div><div class="name">${esc(a.name)}</div><div class="muted small">${c ? esc(c.name) : 'bez klijenta'}${a.address ? ' · ' + esc(a.address) : ''}</div></div>
+    <div>${jobState(j)}</div></div><div class="tags">${jobTags(j)}</div>`;
+  if (j.note) h += `<div class="small" style="margin-top:6px">📝 ${esc(j.note)}</div>`;
+  if (j.problem) h += `<div class="problem">⚠️ ${esc(j.problem)}</div>`;
+  if (j.report) h += `<div class="report">📝 ${esc(j.report)}</div>`;
+  h += '<div class="row">';
+  if (j.status === 'planned') {
+    h += `<select class="inline-select" onchange="assign(${j.id}, this.value)">${opt(activeCleaners().map(x => [x.id, '🧹 ' + x.name])
+      .concat(cl && !cl.active ? [[cl.id, '🧹 ' + cl.name]] : []), j.cleaner_id, '— nitko —')}</select>`;
+    if (cl && cl.phone) h += `<a class="btn sm ghost" target="_blank" rel="noopener" href="${esc(waLink(cl.phone, cleanerMsg(j)))}">💬 ${esc(cl.name)}</a>`;
+    h += `<button class="btn sm ghost" onclick="editJob(${j.id})">Uredi</button>
+      <button class="btn sm ghost" onclick="jobDo(${j.id}, 'done')">✓ Gotovo</button>
+      <button class="btn sm danger" onclick="jobDo(${j.id}, '${j.source === 'ical' ? 'cancel' : 'delete'}')">${j.source === 'ical' ? 'Otkaži' : 'Obriši'}</button>`;
+  } else if (j.status === 'done') {
+    h += `<span class="muted small">${cl ? '🧹 ' + esc(cleaner(j.done_by)?.name || cl.name) : ''}${jobMinutes(j) ? ' · ' + hm(jobMinutes(j)) : ''}</span>`;
+    if (c && c.phone) h += `<a class="btn sm ghost" target="_blank" rel="noopener" href="${esc(waLink(c.phone, ownerMsg(j)))}">💬 Javi vlasniku</a>`;
+    h += `<button class="btn sm ghost" onclick="editJob(${j.id})">Uredi</button>`;
+    if (!j.paid) h += `<button class="btn sm ghost" onclick="jobDo(${j.id}, 'reopen')">Ponovno otvori</button>`;
+  } else h += `<button class="btn sm ghost" onclick="jobDo(${j.id}, 'restore')">↩️ Vrati</button>`;
+  return h + '</div></div>';
+}
+function cleanerMsg(j) {
+  const a = apt(j.apt_id), c = cleaner(j.cleaner_id);
+  return `Bok ${c.name}! Čišćenje: ${a.name}, ${DAYS[new Date(j.date + 'T12:00:00Z').getUTCDay()]} ${dm(j.date)}` +
+    `${j.time ? ' u ' + j.time : a.checkout ? ' (odjava gostiju ' + a.checkout + ')' : ''}` +
+    `${j.next_in === j.date ? '. ⚡ Isti dan dolaze novi gosti' + (a.checkin ? ' u ' + a.checkin : '') : ''}.\nSve upute: ${cleanerLink(c)}`;
+}
+function ownerMsg(j) {
+  const a = apt(j.apt_id);
+  return `Poštovani, apartman ${a.name} je očišćen ${dm(j.date)}${j.finished ? ' u ' + clock(j.finished) : ''} i spreman za goste.` +
+    `${j.problem ? '\nNapomena: ' + j.problem : ''}${j.report ? '\n' + j.report : ''}\n${D.company.name || ''}`;
+}
+
+function jobsTab() {
+  const t = today();
+  const sel = j => who === 'all' || (who === 'none' ? !j.cleaner_id : j.cleaner_id === +who);
+  const end = addDays(t, range - 1);
+  const late = D.jobs.filter(j => j.status === 'planned' && j.date < t && sel(j));
+  const upcoming = D.jobs.filter(j => j.date >= t && j.date <= end && sel(j));
+  const recent = D.jobs.filter(j => j.status === 'done' && j.date < t && j.date >= addDays(t, -7) && sel(j)).reverse();
+  const free = D.jobs.filter(j => j.status === 'planned' && !j.cleaner_id && j.date >= t && j.date <= addDays(t, 14)).length;
+  const errs = D.apts.filter(a => a.active && a.sync_err);
+  let h = '';
+  if (!D.apts.length) h += `<div class="hint">Za početak: u kartici <b>👤 Klijenti</b> dodajte vlasnike, u <b>🏠 Objekti</b> njihove apartmane (s linkovima kalendara s Bookinga/Airbnba), a u <b>🧹 Ekipa</b> čistačice.</div>`;
+  for (const a of errs) h += `<div class="hint">⚠️ <b>${esc(a.name)}</b>: kalendar se ne može pročitati – ${esc(a.sync_err)}. Provjerite link u kartici Objekti.</div>`;
+  h += `<div class="row" style="margin-top:4px"><button class="btn" onclick="editJob()">＋ Dodaj čišćenje</button>
+    <button class="btn ghost" onclick="syncAll()">🔄 Osvježi kalendare</button>
+    <select class="inline-select" style="min-height:40px" onchange="who=this.value;sessionStorage.setItem('who',who);render()">
+      ${opt([['all', 'Svi'], ['none', 'Nitko nije preuzeo']].concat(activeCleaners().map(c => [c.id, '🧹 ' + c.name])), who)}</select>
+    ${free ? `<span class="badge b-hot">${free} bez čistačice (14 dana)</span>` : ''}</div>`;
+  if (late.length) {
+    h += `<div class="day" style="color:var(--err)">Zaostalo – nije označeno kao gotovo</div>`;
+    h += late.map(jobCard).join('');
+  }
+  let last = '';
+  if (!upcoming.length) h += `<p class="muted">Nema čišćenja u sljedećih ${range} dana.</p>`;
+  for (const j of upcoming) {
+    if (j.date !== last) {
+      const n = upcoming.filter(x => x.date === j.date && x.status !== 'cancelled').length;
+      const name = j.date === t ? 'Danas' : j.date === addDays(t, 1) ? 'Sutra' : DAYS[new Date(j.date + 'T12:00:00Z').getUTCDay()];
+      h += `<div class="day">${name} · ${dm(j.date)} · ${n} ${n === 1 ? 'čišćenje' : 'čišćenja'}</div>`;
+      last = j.date;
+    }
+    h += jobCard(j);
+  }
+  h += `<div class="row"><button class="btn ghost" onclick="range+=30;render()">Prikaži još 30 dana</button></div>`;
+  if (recent.length) h += `<details><summary>Završeno u zadnjih 7 dana (${recent.length})</summary>${recent.map(jobCard).join('')}</details>`;
+  return h;
+}
+
+function editJob(id) {
+  const j = id ? D.jobs.find(x => x.id === id) : null;
+  const apts = D.apts.filter(a => a.active || (j && a.id === j.apt_id));
+  if (!apts.length) return toast('Najprije dodajte objekt (kartica 🏠 Objekti).');
+  const s = j || { apt_id: apts[0].id, date: today(), time: '', type: 'turnover', cleaner_id: '', guests: '', price: '', extra: '', extra_note: '', note: '' };
+  modal(j ? 'Uredi čišćenje' : 'Novo čišćenje', `
+    ${j && j.source === 'ical' ? '<p class="help">Ovo čišćenje je iz kalendara (odlazak gostiju). Ako promijenite datum, ostaje povezano s tom rezervacijom.</p>' : ''}
+    <div class="grid">
+      <label>Objekt<select id="j-apt" onchange="aptDefaults(this)">${opt(apts.map(a => [a.id, a.name]), s.apt_id)}</select></label>
+      <label>Datum<input type="date" id="j-date" value="${esc(s.date)}"></label>
+      <label>Vrijeme (neobavezno)<input type="time" id="j-time" value="${esc(s.time)}"></label>
+      <label>Vrsta<select id="j-type">${opt(Object.entries(TYPES), s.type)}</select></label>
+      <label>Čistačica<select id="j-cleaner">${opt(activeCleaners().map(c => [c.id, c.name]), s.cleaner_id, j ? '— nitko —' : '— zadano za objekt —')}</select></label>
+      <label>Pripremiti za (osoba)<input type="number" id="j-guests" min="0" max="30" value="${esc(s.guests || '')}" placeholder="neobavezno"></label>
+      <label>Cijena (€)<input id="j-price" inputmode="decimal" value="${esc(s.price || '')}" placeholder="${esc(apt(s.apt_id).price || '')}"></label>
+      <label>Dodatno (€)<input id="j-extra" inputmode="decimal" value="${esc(s.extra || '')}" placeholder="npr. pranje rublja"></label>
+    </div>
+    <label>Opis dodatnog<input id="j-extra-note" value="${esc(s.extra_note)}" placeholder="npr. 2 kompleta posteljine"></label>
+    <label>Napomena za čistačicu<textarea id="j-note" placeholder="npr. gosti s djecom – dodati krevetić">${esc(s.note)}</textarea></label>
+    <p class="help">Ako cijenu ostavite praznu, upisuje se cijena objekta.</p>`,
+  async m => {
+    const body = { id: j?.id, apt_id: val(m, 'j-apt'), date: val(m, 'j-date'), time: val(m, 'j-time'), type: val(m, 'j-type'),
+      cleaner_id: val(m, 'j-cleaner'), guests: val(m, 'j-guests'), price: val(m, 'j-price'), extra: val(m, 'j-extra'),
+      extra_note: val(m, 'j-extra-note'), note: val(m, 'j-note') };
+    if (!body.date) { toast('Upišite datum.'); return false; }
+    await api('jobs', { method: 'POST', body });
+    await reload(); toast('Spremljeno');
+  });
+}
+function aptDefaults(sel) { const p = sel.closest('.card').querySelector('#j-price'); p.placeholder = apt(+sel.value).price || ''; }
+async function assign(id, cleanerId) {
+  const j = D.jobs.find(x => x.id === id);
+  try { await api('jobs', { method: 'POST', body: { ...j, cleaner_id: cleanerId } }); await reload(); toast(cleanerId ? 'Dodijeljeno' : 'Uklonjeno'); } catch {}
+}
+async function jobDo(id, action) {
+  const q = { done: 'Označiti kao očišćeno?', cancel: 'Otkazati ovo čišćenje? Neće se vratiti ni ako rezervacija ostane u kalendaru.', delete: 'Obrisati ovo čišćenje?', reopen: 'Vratiti u „nije gotovo"?' }[action];
+  if (q && !confirm(q)) return;
+  try {
+    if (action === 'delete') await api('jobs/' + id, { method: 'DELETE' });
+    else await api(`jobs/${id}/${action}`, { method: 'POST', body: {} });
+    await reload();
+  } catch {}
+}
+async function syncAll() {
+  toast('Čitam kalendare…');
+  try {
+    const r = await api('sync', { method: 'POST', body: {} });
+    await reload();
+    const n = r.result.reduce((s, x) => s + (x.added || 0), 0), bad = r.result.filter(x => x.error).length;
+    toast(r.result.length ? `Kalendari osvježeni${n ? ` · ${n} novih čišćenja` : ''}${bad ? ` · ${bad} s greškom` : ''}` : 'Nijedan objekt nema link kalendara.');
+  } catch {}
+}
+
+// ---------- apartments ----------
+function syncState(a) {
+  if (!a.icals.length) return '<span class="badge b-wait">bez kalendara – čišćenja dodajete ručno</span>';
+  if (a.sync_err) return `<span class="badge b-hot">⚠️ ${esc(a.sync_err)}</span>`;
+  if (!a.sync_at) return '<span class="badge b-todo">kalendar još nije pročitan</span>';
+  return `<span class="badge b-ok">📅 kalendar ${clock(a.sync_at)}</span>`;
+}
+function aptCard(a) {
+  const cl = cleaner(a.cleaner_id);
+  const next = D.jobs.find(j => j.apt_id === a.id && j.status === 'planned' && j.date >= today());
+  return `<div class="card${a.active ? '' : ' faded'}"><div class="top"><div><div class="name">🏠 ${esc(a.name)}</div>
+    <div class="muted small">${esc(a.address)}${a.price ? ' · ' + eur(a.price) : ''}${a.minutes ? ' · ' + a.minutes + ' min' : ''}${cl ? ' · 🧹 ' + esc(cl.name) : ''}</div></div>
+    <div>${syncState(a)}</div></div>
+    ${next ? `<div class="small" style="margin-top:6px">Sljedeće čišćenje: <b>${dm(next.date)}</b></div>` : ''}
+    <div class="row"><button class="btn sm ghost" onclick="editApt(${a.id})">Uredi</button>
+    ${a.icals.length && a.active ? `<button class="btn sm ghost" onclick="syncApt(${a.id})">🔄 Kalendar</button>` : ''}
+    <button class="btn sm ${a.active ? 'danger' : 'ghost'}" onclick="archive('apts', ${a.id}, ${a.active ? 1 : 0})">${a.active ? 'Arhiviraj' : 'Vrati'}</button></div></div>`;
+}
+function aptsTab() {
+  let h = `<h2>Objekti <button class="btn sm" onclick="editApt()">＋ Novi objekt</button></h2>`;
+  const active = D.apts.filter(a => a.active);
+  const groups = [...D.clients.filter(c => active.some(a => a.client_id === c.id)), null];
+  for (const c of groups) {
+    const list = active.filter(a => c ? a.client_id === c.id : !client(a.client_id));
+    if (!list.length) continue;
+    h += `<div class="day">${c ? '👤 ' + esc(c.name) : 'Bez klijenta'}</div>` + list.map(aptCard).join('');
+  }
+  if (!active.length) h += '<p class="muted">Još nema objekata.</p>';
+  const old = D.apts.filter(a => !a.active);
+  if (old.length) h += `<details><summary>Arhivirano (${old.length})</summary>${old.map(aptCard).join('')}</details>`;
+  return h;
+}
+function editApt(id) {
+  const a = id ? D.apts.find(x => x.id === id) : { client_id: '', name: '', address: '', map: '', access: '', info: '', checkout: '10:00', checkin: '15:00',
+    price: '', minutes: 120, cleaner_id: '', checklist: D.default_checklist, icals: [] };
+  modal(id ? 'Uredi objekt' : 'Novi objekt', `<div class="grid">
+      <label>Klijent (vlasnik)<select id="a-client">${opt(D.clients.filter(c => c.active || c.id === a.client_id).map(c => [c.id, c.name]), a.client_id, '— bez klijenta —')}</select></label>
+      <label>Naziv<input id="a-name" value="${esc(a.name)}" placeholder="npr. Apartman Sunce A2"></label>
+      <label>Adresa<input id="a-address" value="${esc(a.address)}"></label>
+      <label>Link na kartu (neobavezno)<input id="a-map" value="${esc(a.map)}" placeholder="https://maps.app.goo.gl/…"></label>
+      <label>Odjava gostiju<input type="time" id="a-checkout" value="${esc(a.checkout)}"></label>
+      <label>Dolazak gostiju<input type="time" id="a-checkin" value="${esc(a.checkin)}"></label>
+      <label>Cijena čišćenja (€)<input id="a-price" inputmode="decimal" value="${esc(a.price || '')}"></label>
+      <label>Trajanje (min)<input type="number" id="a-minutes" min="0" max="1440" value="${esc(a.minutes || '')}"></label>
+      <label>Zadana čistačica<select id="a-cleaner">${opt(activeCleaners().map(c => [c.id, c.name]), a.cleaner_id, '— nitko (preuzimaju sami) —')}</select></label>
+    </div>
+    <label>🔑 Ulaz (ključ, šifra, portafon)<textarea id="a-access" placeholder="npr. ključ u kutijici kod vrata, šifra 1234">${esc(a.access)}</textarea></label>
+    <p class="help">Ulaz i upute vidi samo čistačica kojoj je posao dodijeljen.</p>
+    <label>Upute za čistačicu<textarea id="a-info" placeholder="npr. posteljina u ormaru u hodniku, smeće – kontejneri iza zgrade, parking ispred">${esc(a.info)}</textarea></label>
+    <label>Lista zadataka – jedan zadatak po retku, redak s # je naslov (prostorija)<textarea id="a-checklist" style="min-height:220px">${esc(a.checklist.join('\n'))}</textarea></label>
+    <label>📅 Linkovi kalendara (iCal) – jedan po retku<textarea id="a-icals" placeholder="https://admin.booking.com/hotel/hoteladmin/ical.html?t=…&#10;https://www.airbnb.com/calendar/ical/….ics">${esc(a.icals.join('\n'))}</textarea></label>
+    <p class="help"><b>Booking.com:</b> Extranet → Cijene i dostupnost → Sinkronizacija kalendara → Izvoz kalendara → kopirajte link.<br>
+    <b>Airbnb:</b> Kalendar → oglas → Dostupnost → Poveži kalendare → Izvoz kalendara → kopirajte link.<br>
+    Vlasnik vam može poslati te linkove. Svaki odlazak gostiju postaje čišćenje na taj dan. Kalendari se čitaju svakih 30 minuta.</p>`,
+  async m => {
+    const body = { id, client_id: val(m, 'a-client'), name: val(m, 'a-name'), address: val(m, 'a-address'), map: val(m, 'a-map'),
+      checkout: val(m, 'a-checkout'), checkin: val(m, 'a-checkin'), price: val(m, 'a-price'), minutes: val(m, 'a-minutes'),
+      cleaner_id: val(m, 'a-cleaner'), access: val(m, 'a-access'), info: val(m, 'a-info'), checklist: val(m, 'a-checklist'), icals: val(m, 'a-icals') };
+    if (!body.name.trim()) { toast('Upišite naziv.'); return false; }
+    const r = await api('apts', { method: 'POST', body });
+    await reload();
+    const s = r.sync && r.sync[0];
+    toast(s ? (s.error ? '⚠️ Spremljeno, ali kalendar se ne može pročitati' : `Spremljeno · ${s.added} novih čišćenja iz kalendara`) : 'Spremljeno');
+  });
+}
+async function syncApt(id) {
+  try {
+    const r = await api(`apts/${id}/sync`, { method: 'POST', body: {} });
+    await reload();
+    const s = r.result[0];
+    toast(s?.error ? '⚠️ ' + s.error : `Kalendar pročitan · ${s?.added || 0} novih čišćenja`);
+  } catch {}
+}
+async function archive(kind, id, on) {
+  if (on && !confirm('Arhivirati? Povijest i obračun ostaju, ali više se ne prikazuje.' + (kind === 'cleaners' ? ' Link te osobe prestaje raditi.' : ''))) return;
+  try { await api(`${kind}/${id}/archive`, { method: 'POST', body: { on: !!on } }); await reload(); } catch {}
+}
+
+// ---------- clients ----------
+function clientsTab() {
+  let h = `<h2>Klijenti <button class="btn sm" onclick="editClient()">＋ Novi klijent</button></h2>`;
+  const card = c => {
+    const apts = D.apts.filter(a => a.client_id === c.id && a.active);
+    return `<div class="card${c.active ? '' : ' faded'}"><div class="name">👤 ${esc(c.name)}</div>
+      <div class="muted small">${[c.phone, c.email].filter(Boolean).map(esc).join(' · ')}</div>
+      <div class="small" style="margin-top:4px">${apts.length ? apts.map(a => '🏠 ' + esc(a.name)).join(' · ') : '<span class="muted">nema objekata</span>'}</div>
+      ${c.note ? `<div class="small muted" style="margin-top:4px;white-space:pre-wrap">${esc(c.note)}</div>` : ''}
+      <div class="row">${c.phone ? `<a class="btn sm ghost" href="tel:${esc(c.phone.replace(/\s/g, ''))}">📞</a><a class="btn sm ghost" target="_blank" rel="noopener" href="${esc(waLink(c.phone, ''))}">💬 WhatsApp</a>` : ''}
+      <button class="btn sm ghost" onclick="editClient(${c.id})">Uredi</button>
+      <button class="btn sm ${c.active ? 'danger' : 'ghost'}" onclick="archive('clients', ${c.id}, ${c.active ? 1 : 0})">${c.active ? 'Arhiviraj' : 'Vrati'}</button></div></div>`;
+  };
+  const active = D.clients.filter(c => c.active), old = D.clients.filter(c => !c.active);
+  h += active.length ? active.map(card).join('') : '<p class="muted">Još nema klijenata.</p>';
+  if (old.length) h += `<details><summary>Arhivirano (${old.length})</summary>${old.map(card).join('')}</details>`;
+  return h;
+}
+function editClient(id) {
+  const c = id ? D.clients.find(x => x.id === id) : { name: '', phone: '', email: '', note: '' };
+  modal(id ? 'Uredi klijenta' : 'Novi klijent', `<div class="grid">
+      <label>Ime i prezime / tvrtka<input id="c-name" value="${esc(c.name)}"></label>
+      <label>Telefon (WhatsApp)<input id="c-phone" value="${esc(c.phone)}" placeholder="+385 9…"></label>
+      <label>E-mail<input id="c-email" value="${esc(c.email)}"></label></div>
+    <label>Napomena (OIB, dogovor, način plaćanja…)<textarea id="c-note">${esc(c.note)}</textarea></label>`,
+  async m => {
+    const body = { id, name: val(m, 'c-name'), phone: val(m, 'c-phone'), email: val(m, 'c-email'), note: val(m, 'c-note') };
+    if (!body.name.trim()) { toast('Upišite ime.'); return false; }
+    await api('clients', { method: 'POST', body }); await reload(); toast('Spremljeno');
+  });
+}
+
+// ---------- team ----------
+function teamTab() {
+  let h = `<h2>Ekipa <button class="btn sm" onclick="editCleaner()">＋ Nova osoba</button></h2>
+    <p class="muted small">Svaka osoba dobije svoj tajni link: vidi svoja čišćenja za sljedeća 2 tjedna, adresu, ulaz i listu zadataka, i označi kad je gotovo. Cijene i klijente ne vidi.</p>`;
+  const t = today();
+  const card = c => {
+    const next = D.jobs.filter(j => j.cleaner_id === c.id && j.status === 'planned' && j.date >= t && j.date <= addDays(t, 6)).length;
+    const msg = `Bok ${c.name}! Ovo je tvoj link za čišćenja (raspored, adrese, ulaz i lista zadataka). Spremi ga na početni zaslon mobitela:\n${cleanerLink(c)}`;
+    return `<div class="card${c.active ? '' : ' faded'}"><div class="top"><div><div class="name">🧹 ${esc(c.name)}</div>
+      <div class="muted small">${esc(c.phone)}${c.rate_job ? ' · ' + eur(c.rate_job) + ' po čišćenju' : ''}${c.rate_hour ? ' · ' + eur(c.rate_hour) + '/h' : ''}</div></div>
+      ${c.active ? `<span class="badge b-wait">${next} čišćenja u 7 dana</span>` : ''}</div>
+      ${c.active ? `<div class="linkbox">${esc(cleanerLink(c))}</div>
+      <div class="row">${c.phone ? `<a class="btn sm" target="_blank" rel="noopener" href="${esc(waLink(c.phone, msg))}">💬 Pošalji link</a>` : ''}
+        <button class="btn sm ghost" onclick="copy('${esc(cleanerLink(c))}')">📋 Kopiraj</button>
+        <a class="btn sm ghost" href="${esc(cleanerLink(c))}" target="_blank" rel="noopener noreferrer">👁 Otvori</a>
+        <button class="btn sm ghost" onclick="renew(${c.id})">Novi link</button></div>` : ''}
+      <div class="row"><button class="btn sm ghost" onclick="editCleaner(${c.id})">Uredi</button>
+        <button class="btn sm ${c.active ? 'danger' : 'ghost'}" onclick="archive('cleaners', ${c.id}, ${c.active ? 1 : 0})">${c.active ? 'Arhiviraj' : 'Vrati'}</button></div></div>`;
+  };
+  const active = D.cleaners.filter(c => c.active), old = D.cleaners.filter(c => !c.active);
+  h += active.length ? active.map(card).join('') : '<p class="muted">Dodajte čistačice (i sebe, ako i vi čistite).</p>';
+  if (old.length) h += `<details><summary>Arhivirano (${old.length})</summary>${old.map(card).join('')}</details>`;
+  return h;
+}
+function editCleaner(id) {
+  const c = id ? D.cleaners.find(x => x.id === id) : { name: '', phone: '', rate_job: '', rate_hour: '' };
+  modal(id ? 'Uredi' : 'Nova osoba', `<div class="grid">
+      <label>Ime<input id="w-name" value="${esc(c.name)}"></label>
+      <label>Telefon (WhatsApp)<input id="w-phone" value="${esc(c.phone)}" placeholder="+385 9…"></label>
+      <label>Plaća po čišćenju (€)<input id="w-job" inputmode="decimal" value="${esc(c.rate_job || '')}"></label>
+      <label>ili po satu (€)<input id="w-hour" inputmode="decimal" value="${esc(c.rate_hour || '')}"></label></div>
+    <p class="help">Plaća služi samo za vaš obračun (kartica 💶 Obračun). Sati se računaju od „Počinjem" do „Gotovo".</p>`,
+  async m => {
+    const body = { id, name: val(m, 'w-name'), phone: val(m, 'w-phone'), rate_job: val(m, 'w-job'), rate_hour: val(m, 'w-hour') };
+    if (!body.name.trim()) { toast('Upišite ime.'); return false; }
+    await api('cleaners', { method: 'POST', body }); await reload(); toast('Spremljeno');
+  });
+}
+async function renew(id) {
+  if (!confirm('Napraviti novi link? Stari link odmah prestaje raditi.')) return;
+  try { await api(`cleaners/${id}/renew`, { method: 'POST', body: {} }); await reload(); toast('Novi link napravljen – pošaljite ga.'); } catch {}
+}
+async function copy(text) {
+  try { await navigator.clipboard.writeText(text); } catch {
+    const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove();
+  }
+  toast('Kopirano');
+}
+
+// ---------- billing ----------
+const jobTotal = j => (+j.price || 0) + (+j.extra || 0);
+function monthJobs() { return D.jobs.filter(j => j.status === 'done' && j.date.slice(0, 7) === month); }
+function moneyTab() {
+  const jobs = monthJobs();
+  const total = jobs.reduce((s, j) => s + jobTotal(j), 0), unpaid = jobs.filter(j => !j.paid).reduce((s, j) => s + jobTotal(j), 0);
+  const [y, mo] = month.split('-');
+  let h = `<h2>Obračun</h2><div class="row" style="margin-top:0"><input type="month" style="width:auto" value="${month}" onchange="month=this.value||month;render()">
+    <button class="btn ghost" onclick="exportCsv()">⬇️ CSV</button></div>
+    <div class="stats" style="margin-top:12px"><div class="stat"><span class="muted small">Čišćenja</span><b>${jobs.length}</b></div>
+    <div class="stat"><span class="muted small">Ukupno</span><b>${eur(total)}</b></div>
+    <div class="stat"><span class="muted small">Nenaplaćeno</span><b style="color:${unpaid ? 'var(--warn)' : 'inherit'}">${eur(unpaid)}</b></div>
+    <div class="stat"><span class="muted small">Plaće</span><b>${eur(D.cleaners.reduce((s, c) => s + pay(c, jobs).pay, 0))}</b></div></div>`;
+  const ids = [...new Set(jobs.map(j => apt(j.apt_id).client_id || 0))];
+  h += `<h2>Klijenti · ${MONTHS[+mo - 1]} ${y}.</h2>`;
+  if (!jobs.length) h += '<p class="muted">U ovom mjesecu nema završenih čišćenja.</p>';
+  for (const cid of ids) {
+    const c = client(cid), list = jobs.filter(j => (apt(j.apt_id).client_id || 0) === cid);
+    const sum = list.reduce((s, j) => s + jobTotal(j), 0), open = list.filter(j => !j.paid);
+    h += `<div class="card"><div class="top"><div class="name">👤 ${c ? esc(c.name) : 'Bez klijenta'}</div>
+      <span class="badge ${open.length ? 'b-todo' : 'b-ok'}">${open.length ? 'Nenaplaćeno ' + eur(open.reduce((s, j) => s + jobTotal(j), 0)) : '✓ Naplaćeno'}</span></div>
+      <div class="scroll"><table class="list"><tr><th>Datum</th><th>Objekt</th><th>Vrsta</th><th class="n">Cijena</th><th class="n">Dodatno</th><th class="n">Ukupno</th><th>Plaćeno</th></tr>
+      ${list.map(j => `<tr><td>${dm(j.date)}</td><td>${esc(apt(j.apt_id).name)}</td><td>${TYPES[j.type]}</td><td class="n">${eur(j.price)}</td>
+        <td class="n" title="${esc(j.extra_note)}">${j.extra ? eur(j.extra) + (j.extra_note ? ' ℹ️' : '') : ''}</td><td class="n">${eur(jobTotal(j))}</td>
+        <td><input type="checkbox" ${j.paid ? 'checked' : ''} onchange="paid([${j.id}], this.checked)"></td></tr>`).join('')}
+      <tr class="total"><td colspan="5">Ukupno</td><td class="n">${eur(sum)}</td><td></td></tr></table></div>
+      <div class="row">${open.length ? `<button class="btn sm ok" onclick="paid([${open.map(j => j.id)}], true)">✓ Sve plaćeno</button>` : ''}
+      ${c && c.phone ? `<a class="btn sm ghost" target="_blank" rel="noopener" href="${esc(waLink(c.phone, billMsg(c, list)))}">💬 Pošalji obračun</a>` : ''}
+      ${c && c.email ? `<a class="btn sm ghost" href="mailto:${esc(c.email)}?subject=${encodeURIComponent(`Obračun čišćenja ${MONTHS[+mo - 1]} ${y}.`)}&body=${encodeURIComponent(billMsg(c, list))}">📧 E-mail</a>` : ''}</div></div>`;
+  }
+  const team = D.cleaners.map(c => ({ c, ...pay(c, jobs) })).filter(x => x.n);
+  if (team.length) {
+    h += `<h2>Ekipa · ${MONTHS[+mo - 1]} ${y}.</h2><div class="card scroll"><table class="list"><tr><th>Ime</th><th class="n">Čišćenja</th><th class="n">Sati</th><th class="n">Plaća</th></tr>
+      ${team.map(x => `<tr><td>${esc(x.c.name)}</td><td class="n">${x.n}</td><td class="n">${x.minutes ? hm(x.minutes) : '–'}</td><td class="n">${x.pay ? eur(x.pay) : '–'}</td></tr>`).join('')}
+      </table><p class="help">Sati se računaju samo za čišćenja kod kojih je čistačica dodirnula „Počinjem" ili označila prvi zadatak.</p></div>`;
+  }
+  return h;
+}
+function pay(c, jobs) {
+  const list = jobs.filter(j => j.done_by === c.id);
+  const minutes = list.reduce((s, j) => s + jobMinutes(j), 0);
+  return { n: list.length, minutes, pay: Math.round((list.length * (c.rate_job || 0) + minutes / 60 * (c.rate_hour || 0)) * 100) / 100 };
+}
+function billMsg(c, list) {
+  const [y, mo] = month.split('-');
+  return `Poštovani ${c.name},\nobračun čišćenja za ${MONTHS[+mo - 1]} ${y}.:\n` +
+    list.map(j => `${dm(j.date)} ${apt(j.apt_id).name} – ${eur(jobTotal(j))}${j.extra_note ? ' (' + j.extra_note + ')' : ''}`).join('\n') +
+    `\nUkupno: ${eur(list.reduce((s, j) => s + jobTotal(j), 0))}\n${D.company.name || ''}`;
+}
+async function paid(ids, on) {
+  try { await api('paid', { method: 'POST', body: { ids, on } }); await reload(); } catch {}
+}
+function exportCsv() {
+  const q = v => '"' + String(v ?? '').replace(/"/g, '""') + '"';
+  const n = v => String(Math.round((+v || 0) * 100) / 100).replace('.', ',');
+  const rows = [['Datum', 'Klijent', 'Objekt', 'Vrsta', 'Cijena', 'Dodatno', 'Opis dodatnog', 'Ukupno', 'Čistačica', 'Minuta', 'Plaćeno']]
+    .concat(monthJobs().map(j => [fmt(j.date), client(apt(j.apt_id).client_id)?.name || '', apt(j.apt_id).name, TYPES[j.type], n(j.price), n(j.extra), j.extra_note,
+      n(jobTotal(j)), cleaner(j.done_by)?.name || '', jobMinutes(j) || '', j.paid ? 'da' : 'ne']));
+  const blob = new Blob(['﻿' + rows.map(r => r.map(q).join(';')).join('\r\n')], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `ciscenje-${month}.csv`; a.click();
+}
+
+// ---------- settings ----------
+function settingsTab() {
+  return `<h2>Postavke</h2><div class="card"><h3>Tvrtka</h3>
+    <p class="muted small">Ime se prikazuje u porukama vlasnicima, a telefon čistačicama za pitanja.</p>
+    <div class="grid"><label>Naziv / ime<input id="s-name" value="${esc(D.company.name)}"></label>
+    <label>Telefon<input id="s-phone" value="${esc(D.company.phone)}" placeholder="+385 9…"></label>
+    <label>E-mail<input id="s-email" value="${esc(D.company.email)}"></label></div>
+    <div class="row"><button class="btn" onclick="saveCompany()">💾 Spremi</button></div></div>
+    <div class="card"><h3>📲 Obavijesti na Telegram</h3>
+    <p class="muted small">Poruka stiže kad je apartman očišćen (i ako je prijavljena šteta), kad netko preuzme posao, kad stigne nova rezervacija ili se otkaže i kad se kalendar ne može pročitati.</p>
+    ${!D.tg_token ? `<div class="hint">U Cloudflareu dodajte tajnu varijablu <b>TELEGRAM_BOT_TOKEN</b> (token od @BotFather). Upute su u README datoteci.</div>`
+      : `<p class="small">${D.tg_chats.length ? 'Povezano: ' + D.tg_chats.map(c => esc(c.name || c.id)).join(', ') : 'Još nitko nije povezan. Pošaljite botu /start u Telegramu pa dodirnite gumb.'}</p>
+      <div class="row"><button class="btn" onclick="tg()">Poveži i pošalji probnu poruku</button>
+      ${D.tg_chats.length ? '<button class="btn danger" onclick="tgOff()">Isključi</button>' : ''}</div>`}</div>
+    <div class="card"><h3>📅 Google kalendar</h3>
+    <p class="muted small">Sva čišćenja (objekt, čistačica, dolazak novih gostiju) u vašem Google kalendaru.</p>
+    ${D.cal_token ? `<div class="linkbox">${esc(location.origin + '/cal/' + D.cal_token + '.ics')}</div>
+      <div class="row"><button class="btn" onclick="copy('${esc(location.origin + '/cal/' + D.cal_token + '.ics')}')">📋 Kopiraj link</button>
+      <button class="btn danger" onclick="calToken(true)">Napravi novi link</button></div>
+      <p class="muted small">Na računalu: calendar.google.com → Ostali kalendari → ＋ → Iz URL-a → zalijepite link. Google osvježava kalendar sam, obično svakih nekoliko sati.</p>`
+      : `<div class="row"><button class="btn" onclick="calToken(false)">📅 Napravi link za kalendar</button></div>`}</div>
+    <div class="card"><h3>🔄 Kalendari objekata</h3><p class="muted small">Booking.com i Airbnb kalendari čitaju se sami svakih 30 minuta.</p>
+    <div class="row"><button class="btn ghost" onclick="syncAll()">Pročitaj sada</button></div></div>`;
+}
+async function saveCompany() {
+  try {
+    await api('company', { method: 'POST', body: { name: document.getElementById('s-name').value, phone: document.getElementById('s-phone').value, email: document.getElementById('s-email').value } });
+    await reload(); toast('Spremljeno');
+  } catch {}
+}
+async function tg() { try { const r = await api('telegram', { method: 'POST', body: {} }); await reload(); toast(r.chats.length ? 'Poslana probna poruka' : 'Nitko nije poslao /start botu'); } catch {} }
+async function tgOff() { if (!confirm('Isključiti obavijesti?')) return; try { await api('telegram', { method: 'DELETE' }); await reload(); } catch {} }
+async function calToken(renew) {
+  if (renew && !confirm('Stari link prestaje raditi. Nastaviti?')) return;
+  try { await api('calendar', { method: 'POST', body: { renew } }); await reload(); } catch {}
+}
+
+if (pin) reload(); else showLogin();
+</script>
+</body>
+</html>

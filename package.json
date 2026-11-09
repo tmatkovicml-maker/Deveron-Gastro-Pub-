@@ -1,0 +1,8 @@
+{
+  "name": "ciscenje-apartmana",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev"
+  }
+}
