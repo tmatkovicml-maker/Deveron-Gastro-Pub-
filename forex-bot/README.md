@@ -88,7 +88,7 @@ Bot radi dok je računalo upaljeno. Stop-loss i take-profit su ionako kod Binanc
 pa je pozicija zaštićena i kad je računalo ugašeno.
 
 **Windows**
-1. Instaliraj **Python 3.11 ili noviji** s python.org. Pri instalaciji označi **"Add python.exe to PATH"**.
+1. Instaliraj **Python 3.11 ili noviji** s python.org (ili iz Microsoft Storea). Ako instalacija nudi **"Add python.exe to PATH"**, označi to; nova instalacija (Python Install Manager) to radi sama.
 2. Na GitHubu otvori ovaj repozitorij i odaberi granu `claude/automated-trading-app-f1e9tt`.
    Klikni **Code → Download ZIP**, raspakiraj i uđi u mapu `forex-bot`.
 3. Dvoklikni **`setup_windows.bat`**. Otvorit će se Notepad: upiši testnet ključeve i Telegram, pa spremi.
