@@ -48,7 +48,29 @@ Bot ti javlja svaku kupnju, svako zatvaranje (s rezultatom u €) i dosegnut dne
 2. Pošalji bilo koju poruku svom novom botu.
 3. Otvori `https://api.telegram.org/bot<TOKEN>/getUpdates`, nađi `"chat":{"id":...}` i to je **chat id**.
 
-### 3. Raspberry Pi
+### 3a. Pokretanje na računalu (najlakše za početak)
+Bot radi dok je računalo upaljeno. Stop-loss i take-profit su ionako kod Binancea,
+pa je pozicija zaštićena i kad je računalo ugašeno.
+
+**Windows**
+1. Instaliraj **Python 3.11 ili noviji** s python.org. Pri instalaciji označi **"Add python.exe to PATH"**.
+2. Na GitHubu otvori ovaj repozitorij i odaberi granu `claude/automated-trading-app-f1e9tt`.
+   Klikni **Code → Download ZIP**, raspakiraj i uđi u mapu `forex-bot`.
+3. Dvoklikni **`setup_windows.bat`**. Otvorit će se Notepad: upiši testnet ključeve i Telegram, pa spremi.
+4. Dvoklikni **`provjera.bat`**, a na Telegram mora stići test poruka.
+5. Dvoklikni **`backtest.bat`** i pošalji mi rezultat.
+6. Dvoklikni **`pokreni_bota.bat`** i ostavi prozor otvoren.
+   - U *Postavke → Sustav → Napajanje* isključi stanje mirovanja (Sleep) dok bot radi.
+
+**Mac / Linux** (u Terminalu, unutar mape `forex-bot`):
+```bash
+bash start.sh setup      # instalacija + izrada .env (zatim ga uredi)
+bash start.sh check      # provjera veze
+bash start.sh backtest   # backtest BTC i ETH
+bash start.sh run        # pokreni bota (Ctrl+C za zaustavljanje)
+```
+
+### 3b. Raspberry Pi (za rad 0-24)
 Dovoljan je **Raspberry Pi 4 (2 GB)** ili **Pi 5**, s microSD karticom od 16 GB ili više
 i originalnim punjačem. **Tablet ne treba.**
 

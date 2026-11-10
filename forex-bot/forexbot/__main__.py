@@ -180,6 +180,12 @@ def cmd_backtest_binance(cfg: Config, args: argparse.Namespace) -> int:
 
 
 def main(argv=None) -> int:
+    # Windows konzola: hrvatska slova i emoji ne smiju srušiti bota
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8", errors="replace")
+        except (AttributeError, ValueError):
+            pass
     parser = argparse.ArgumentParser(prog="forexbot", description="Trading bot (Binance spot ili OANDA forex)")
     parser.add_argument("--env-file", default=".env")
     parser.add_argument("-v", "--verbose", action="store_true")
