@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+from decimal import Decimal
 from typing import Callable, Optional, Tuple
 
 
@@ -54,3 +55,32 @@ def position_units(
     margin_per_unit = base_to_account / leverage
     units_by_margin = math.floor(balance * max_margin_use / margin_per_unit)
     return max(0, min(units_by_risk, units_by_margin))
+
+
+def floor_to_step(value: float, step: float) -> float:
+    """Zaokruži prema dolje na dopušteni korak (npr. LOT_SIZE stepSize na Binanceu)."""
+    if step <= 0:
+        return value
+    d_step = Decimal(str(step))
+    return float((Decimal(str(value)) // d_step) * d_step)
+
+
+def spot_quantity(
+    equity: float,
+    risk_fraction: float,
+    sl_distance: float,
+    entry: float,
+    fee_rate: float,
+    max_cost: float,
+    step: float,
+) -> float:
+    """Količina za spot kupnju (bez poluge).
+
+    Gubitak na stop-lossu (uključujući proviziju kupnje i prodaje) ~ risk_fraction * equity,
+    a ukupni trošak kupnje ne prelazi max_cost.
+    """
+    if equity <= 0 or sl_distance <= 0 or entry <= 0 or max_cost <= 0:
+        return 0.0
+    loss_per_unit = sl_distance + entry * fee_rate * 2
+    qty = min(equity * risk_fraction / loss_per_unit, max_cost / (entry * (1 + fee_rate)))
+    return max(0.0, floor_to_step(qty, step))

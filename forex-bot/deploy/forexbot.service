@@ -1,5 +1,5 @@
 [Unit]
-Description=Forex trading bot
+Description=Trading bot (Binance/OANDA)
 After=network-online.target time-sync.target
 Wants=network-online.target
 

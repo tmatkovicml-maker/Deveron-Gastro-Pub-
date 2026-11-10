@@ -61,7 +61,7 @@ class FakeTelegram:
 
 
 def make_bot(tmp_path, client, tg=None, now=None, **cfg_kw):
-    cfg = Config(oanda_token="t", oanda_account_id="a", instruments=["EUR_USD"], data_dir=tmp_path, **cfg_kw)
+    cfg = Config(broker="oanda", oanda_token="t", oanda_account_id="a", instruments=["EUR_USD"], data_dir=tmp_path, **cfg_kw)
     return Bot(cfg, client, tg or FakeTelegram(), now=now or (lambda: datetime(2025, 3, 3, 12, 5, tzinfo=timezone.utc)))
 
 
@@ -169,6 +169,10 @@ def test_telegram_commands(tmp_path):
 def test_live_requires_confirmation(monkeypatch):
     monkeypatch.delenv("I_UNDERSTAND_REAL_MONEY", raising=False)
     with pytest.raises(ConfigError):
-        Config(oanda_env="live").validate()
+        Config(broker="oanda", oanda_env="live").validate()
+    with pytest.raises(ConfigError):
+        Config(broker="binance", binance_testnet=False).validate()
+    Config(broker="binance", binance_testnet=True).validate()
     monkeypatch.setenv("I_UNDERSTAND_REAL_MONEY", "da")
-    Config(oanda_env="live").validate()
+    Config(broker="oanda", oanda_env="live").validate()
+    Config(broker="binance", binance_testnet=False).validate()

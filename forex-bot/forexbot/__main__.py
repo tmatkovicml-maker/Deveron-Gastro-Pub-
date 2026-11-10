@@ -1,8 +1,8 @@
-"""Naredbe:
+"""Naredbe (broker se bira s BROKER=binance ili BROKER=oanda u .env):
 
-  python -m forexbot check                  provjera veze s OANDA-om i Telegramom
+  python -m forexbot check                  provjera veze s brokerom i Telegramom
   python -m forexbot run                    pokreni bota (radi stalno)
-  python -m forexbot backtest --days 730    backtest na povijesnim podacima s OANDA-e
+  python -m forexbot backtest --days 730    backtest na povijesnim podacima
   python -m forexbot backtest --csv f.csv   backtest na vlastitoj CSV datoteci
 """
 
@@ -16,6 +16,7 @@ from datetime import datetime, timedelta, timezone
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
+from .binance import BinanceClient, BinanceError
 from .backtest import load_csv, run_backtest, save_csv
 from .bot import Bot
 from .config import Config, ConfigError
@@ -42,24 +43,62 @@ def make_client(cfg: Config) -> OandaClient:
     return OandaClient(cfg.oanda_token, cfg.oanda_account_id, cfg.oanda_env)
 
 
+def make_binance(cfg: Config) -> BinanceClient:
+    cfg.require_binance()
+    client = BinanceClient(cfg.binance_api_key, cfg.binance_api_secret, testnet=cfg.binance_testnet)
+    client.sync_time()
+    return client
+
+
+def check_telegram(cfg: Config) -> None:
+    tg = Telegram(cfg.telegram_token, cfg.telegram_chat_id)
+    if tg.enabled:
+        ok = tg.send("✅ Trading bot: test poruka - Telegram radi.")
+        print("Telegram:", "OK" if ok else "GREŠKA (provjeri token i chat id)")
+    else:
+        print("Telegram: nije podešen (TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID)")
+
+
+def cmd_check_binance(cfg: Config) -> int:
+    client = make_binance(cfg)
+    where = "TESTNET" if cfg.binance_testnet else "PRAVI RAČUN"
+    balances = client.balances()
+    quotes = set()
+    for sym in cfg.symbols:
+        info = client.symbol_info(sym)
+        quotes.add(info["quote"])
+        b = client.book(sym)
+        print(f"  {sym}: bid {b['bid']} / ask {b['ask']}  (min. nalog {info['min_notional']} {info['quote']}, status {info['status']})")
+    if len(quotes) > 1:
+        print(f"UPOZORENJE: svi parovi moraju imati istu kotnu valutu, a imaju {quotes}")
+        return 2
+    q = quotes.pop()
+    print(f"Binance ({where}) OK - slobodno {balances.get(q, {}).get('free', 0):.2f} {q}")
+    check_telegram(cfg)
+    return 0
+
+
 def cmd_check(cfg: Config) -> int:
+    if cfg.broker == "binance":
+        return cmd_check_binance(cfg)
     client = make_client(cfg)
     acc = client.account_summary()
     print(f"OANDA ({cfg.oanda_env}) OK - račun {acc['id']}: {float(acc['balance']):.2f} {acc['currency']}")
     for inst in cfg.instruments:
         p = client.pricing([inst]).get(inst)
         print(f"  {inst}: bid {p['bid']} / ask {p['ask']} {'(otvoreno)' if p['tradeable'] else '(tržište zatvoreno)'}")
-    tg = Telegram(cfg.telegram_token, cfg.telegram_chat_id)
-    if tg.enabled:
-        ok = tg.send("✅ Forex bot: test poruka - Telegram radi.")
-        print("Telegram:", "OK" if ok else "GREŠKA (provjeri token i chat id)")
-    else:
-        print("Telegram: nije podešen (TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID)")
+    check_telegram(cfg)
     return 0
 
 
 def cmd_run(cfg: Config) -> int:
-    bot = Bot(cfg, make_client(cfg), Telegram(cfg.telegram_token, cfg.telegram_chat_id))
+    tg = Telegram(cfg.telegram_token, cfg.telegram_chat_id)
+    if cfg.broker == "binance":
+        from .spot_bot import SpotBot
+
+        bot = SpotBot(cfg, make_binance(cfg), tg)
+    else:
+        bot = Bot(cfg, make_client(cfg), tg)
 
     def _stop(*_):
         logging.info("Zaustavljam bota...")
@@ -72,6 +111,8 @@ def cmd_run(cfg: Config) -> int:
 
 
 def cmd_backtest(cfg: Config, args: argparse.Namespace) -> int:
+    if cfg.broker == "binance":
+        return cmd_backtest_binance(cfg, args)
     instruments = [args.instrument] if args.instrument else cfg.instruments
     total_start = total_end = 0.0
     for inst in instruments:
@@ -104,8 +145,42 @@ def cmd_backtest(cfg: Config, args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_backtest_binance(cfg: Config, args: argparse.Namespace) -> int:
+    # povijest se uvijek uzima s pravog tržišta (javni podaci, ključ nije potreban)
+    symbols = [args.instrument] if args.instrument else cfg.symbols
+    client = BinanceClient(testnet=False)
+    total = 0.0
+    for sym in symbols:
+        if args.csv:
+            candles = load_csv(Path(args.csv))
+        else:
+            start = datetime.now(timezone.utc) - timedelta(days=args.days)
+            print(f"Dohvaćam {sym} {cfg.granularity} od {start:%Y-%m-%d}...")
+            candles = client.history(sym, cfg.granularity, int(start.timestamp() * 1000))
+            save_csv(candles, cfg.data_dir / "history" / f"{sym}_{cfg.granularity}.csv")
+        res = run_backtest(
+            candles,
+            cfg.strategy,
+            instrument=sym,
+            start_balance=args.balance,
+            risk_per_trade=cfg.risk_per_trade,
+            account_currency="QUOTE",
+            spot=True,
+            fee_rate=cfg.fee_rate,
+            max_position_fraction=cfg.max_position_fraction,
+        )
+        print(res.summary())
+        print(f"Svijeća: {len(candles)}\n")
+        total += res.end_balance - res.start_balance
+        if args.csv:
+            break
+    if len(symbols) > 1 and not args.csv:
+        print(f"Ukupno (svaki par zasebno s {args.balance:.0f}): {total:+.2f}")
+    return 0
+
+
 def main(argv=None) -> int:
-    parser = argparse.ArgumentParser(prog="forexbot", description="Forex trading bot (OANDA)")
+    parser = argparse.ArgumentParser(prog="forexbot", description="Trading bot (Binance spot ili OANDA forex)")
     parser.add_argument("--env-file", default=".env")
     parser.add_argument("-v", "--verbose", action="store_true")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -116,7 +191,7 @@ def main(argv=None) -> int:
     bt.add_argument("--days", type=int, default=730)
     bt.add_argument("--csv")
     bt.add_argument("--balance", type=float, default=500.0)
-    bt.add_argument("--spread", type=float, default=1.2, help="prosječni spread u pipima")
+    bt.add_argument("--spread", type=float, default=1.2, help="OANDA: prosječni spread u pipima")
     args = parser.parse_args(argv)
 
     try:
@@ -137,6 +212,9 @@ def main(argv=None) -> int:
         return 2
     except OandaError as exc:
         print(f"OANDA greška: {exc}", file=sys.stderr)
+        return 1
+    except BinanceError as exc:
+        print(f"Binance greška: {exc}", file=sys.stderr)
         return 1
 
 

@@ -14,7 +14,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List, Optional
 
-from .risk import pip_size, position_units, split_pair
+from .risk import pip_size, position_units, spot_quantity, split_pair
 from .strategy import Candle, StrategyParams, compute_indicators, signal_at
 
 
@@ -25,7 +25,7 @@ class Trade:
     entry: float
     stop_loss: float
     take_profit: float
-    units: int
+    units: float
     exit_time: str = ""
     exit: float = 0.0
     pnl: float = 0.0
@@ -88,7 +88,12 @@ def run_backtest(
     account_currency: str = "EUR",
     leverage: float = 30.0,
     max_margin_use: float = 0.5,
+    spot: bool = False,
+    fee_rate: float = 0.0,
+    max_position_fraction: float = 0.45,
+    qty_step: float = 0.000001,
 ) -> BacktestResult:
+    """spot=True: samo kupnja (bez short-a i poluge), provizija fee_rate po strani (Binance)."""
     ind = compute_indicators(candles, params)
     spread = spread_pips * pip_size(instrument)
     balance = start_balance
@@ -96,7 +101,7 @@ def run_backtest(
     max_dd = 0.0
     trades: List[Trade] = []
     pos: Optional[Trade] = None
-    base, quote = split_pair(instrument)
+    base, quote = split_pair(instrument) if "_" in instrument else (instrument, account_currency)
 
     for i in range(len(candles)):
         c = candles[i]
@@ -110,9 +115,12 @@ def run_backtest(
             elif hit_tp:
                 exit_price, pos.result = pos.take_profit, "TP"
             if exit_price is not None:
-                move = (exit_price - pos.entry) * d
-                pnl_quote = (move - spread) * pos.units
-                pos.pnl = _to_account(pnl_quote, instrument, exit_price, account_currency)
+                if spot:
+                    pos.pnl = pos.units * exit_price * (1 - fee_rate) - pos.units * pos.entry * (1 + fee_rate)
+                else:
+                    move = (exit_price - pos.entry) * d
+                    pnl_quote = (move - spread) * pos.units
+                    pos.pnl = _to_account(pnl_quote, instrument, exit_price, account_currency)
                 pos.exit, pos.exit_time = exit_price, c.time
                 balance += pos.pnl
                 trades.append(pos)
@@ -122,6 +130,8 @@ def run_backtest(
 
         if pos is None and balance > 0 and i + 1 < len(candles):
             sig = signal_at(candles, ind, i, params)
+            if sig is not None and spot and sig.side != "buy":
+                sig = None
             if sig is not None:
                 nxt = candles[i + 1]
                 entry = nxt.open
@@ -129,7 +139,13 @@ def run_backtest(
                 price = entry
                 q2a = 1.0 if quote == account_currency else (1.0 / price if base == account_currency else 1.0)
                 b2a = 1.0 if base == account_currency else (price if quote == account_currency else 1.0)
-                units = position_units(balance, risk_per_trade, sig.sl_distance, q2a, b2a, leverage, max_margin_use)
+                if spot:
+                    units = spot_quantity(
+                        balance, risk_per_trade, sig.sl_distance, entry, fee_rate,
+                        balance * max_position_fraction, qty_step,
+                    )
+                else:
+                    units = position_units(balance, risk_per_trade, sig.sl_distance, q2a, b2a, leverage, max_margin_use)
                 if units > 0:
                     pos = Trade(
                         side=sig.side,

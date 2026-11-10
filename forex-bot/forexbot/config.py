@@ -66,6 +66,7 @@ GRANULARITY_SECONDS = {
 
 @dataclass
 class Config:
+    broker: str = "binance"
     oanda_token: str = ""
     oanda_account_id: str = ""
     oanda_env: str = "practice"
@@ -83,6 +84,14 @@ class Config:
     telegram_chat_id: str = ""
     data_dir: Path = Path("data")
     strategy: StrategyParams = field(default_factory=StrategyParams)
+    # --- Binance spot ---
+    binance_api_key: str = ""
+    binance_api_secret: str = ""
+    binance_testnet: bool = True
+    symbols: List[str] = field(default_factory=lambda: ["BTCUSDT", "ETHUSDT"])
+    fee_rate: float = 0.001
+    max_spread_pct: float = 0.15
+    max_position_fraction: float = 0.45
 
     @property
     def granularity_seconds(self) -> int:
@@ -100,13 +109,27 @@ class Config:
             sl_atr=_float("SL_ATR", 1.5),
             tp_atr=_float("TP_ATR", 3.0),
         )
+        broker = _get("BROKER", "binance").lower()
+        testnet = _bool("BINANCE_TESTNET", True)
+        # Testnet ima USDT parove; u EU se na pravom računu trguje s EUR (ili USDC) parovima.
+        default_symbols = "BTCUSDT,ETHUSDT" if testnet else "BTCEUR,ETHEUR"
+        symbols = [s.strip().upper() for s in _get("SYMBOLS", default_symbols).split(",") if s.strip()]
+        default_gran = "H4" if broker == "binance" else "H1"
         instruments = [s.strip().upper() for s in _get("INSTRUMENTS", "EUR_USD,GBP_USD,USD_JPY,EUR_GBP").split(",") if s.strip()]
         cfg = cls(
+            broker=broker,
+            binance_api_key=_get("BINANCE_API_KEY"),
+            binance_api_secret=_get("BINANCE_API_SECRET"),
+            binance_testnet=testnet,
+            symbols=symbols,
+            fee_rate=_float("FEE_RATE", 0.001),
+            max_spread_pct=_float("MAX_SPREAD_PCT", 0.15),
+            max_position_fraction=_float("MAX_POSITION_FRACTION", 0.45),
             oanda_token=_get("OANDA_TOKEN"),
             oanda_account_id=_get("OANDA_ACCOUNT_ID"),
             oanda_env=_get("OANDA_ENV", "practice").lower(),
             instruments=instruments,
-            granularity=_get("GRANULARITY", "H1").upper(),
+            granularity=_get("GRANULARITY", default_gran).upper(),
             risk_per_trade=_float("RISK_PER_TRADE", 0.01),
             max_open_trades=_int("MAX_OPEN_TRADES", 2),
             daily_loss_limit=_float("DAILY_LOSS_LIMIT", 0.03),
@@ -123,14 +146,22 @@ class Config:
         cfg.validate()
         return cfg
 
+    @property
+    def is_live(self) -> bool:
+        if self.broker == "binance":
+            return not self.binance_testnet
+        return self.oanda_env == "live"
+
     def validate(self) -> None:
-        if self.oanda_env not in ("practice", "live"):
-            raise ConfigError("OANDA_ENV mora biti 'practice' (demo) ili 'live' (pravi novac)")
-        if self.oanda_env == "live" and _get("I_UNDERSTAND_REAL_MONEY").lower() != "da":
+        if self.broker not in ("binance", "oanda"):
+            raise ConfigError("BROKER mora biti 'binance' ili 'oanda'")
+        if self.is_live and _get("I_UNDERSTAND_REAL_MONEY").lower() != "da":
             raise ConfigError(
-                "OANDA_ENV=live trguje PRAVIM novcem. Ako to stvarno želiš, "
+                "Postavke trguju PRAVIM novcem. Ako to stvarno želiš, "
                 "dodaj I_UNDERSTAND_REAL_MONEY=da u .env"
             )
+        if self.oanda_env not in ("practice", "live"):
+            raise ConfigError("OANDA_ENV mora biti 'practice' (demo) ili 'live' (pravi novac)")
         if self.granularity not in GRANULARITY_SECONDS:
             raise ConfigError(f"GRANULARITY mora biti jedno od: {', '.join(GRANULARITY_SECONDS)}")
         if not 0 < self.risk_per_trade <= 0.03:
@@ -139,11 +170,21 @@ class Config:
             raise ConfigError("DAILY_LOSS_LIMIT mora biti između 0 i 0.2")
         if self.max_open_trades < 1:
             raise ConfigError("MAX_OPEN_TRADES mora biti barem 1")
-        if not self.instruments:
-            raise ConfigError("INSTRUMENTS ne smije biti prazan")
-        for inst in self.instruments:
-            if len(inst.split("_")) != 2:
-                raise ConfigError(f"Neispravan par '{inst}' - koristi oblik EUR_USD")
+        if self.broker == "oanda":
+            if not self.instruments:
+                raise ConfigError("INSTRUMENTS ne smije biti prazan")
+            for inst in self.instruments:
+                if len(inst.split("_")) != 2:
+                    raise ConfigError(f"Neispravan par '{inst}' - koristi oblik EUR_USD")
+        else:
+            if not self.symbols:
+                raise ConfigError("SYMBOLS ne smije biti prazan")
+            if not 0 < self.max_position_fraction <= 1:
+                raise ConfigError("MAX_POSITION_FRACTION mora biti između 0 i 1")
+
+    def require_binance(self) -> None:
+        if not self.binance_api_key or not self.binance_api_secret:
+            raise ConfigError("Nedostaju BINANCE_API_KEY i/ili BINANCE_API_SECRET u .env datoteci")
 
     def require_oanda(self) -> None:
         if not self.oanda_token or not self.oanda_account_id:

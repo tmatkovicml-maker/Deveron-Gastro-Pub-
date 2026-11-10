@@ -6,7 +6,7 @@ import json
 import os
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Dict, List
+from typing import Any, Dict, List
 
 
 @dataclass
@@ -17,6 +17,7 @@ class State:
     daily_limit_hit: bool = False
     last_candle: Dict[str, str] = field(default_factory=dict)
     known_trades: List[str] = field(default_factory=list)
+    positions: Dict[str, Dict[str, Any]] = field(default_factory=dict)  # Binance spot
 
     @classmethod
     def load(cls, path: Path) -> "State":
