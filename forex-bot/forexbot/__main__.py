@@ -169,7 +169,12 @@ def cmd_backtest_grid(cfg: Config, args: argparse.Namespace) -> int:
     except ValueError as exc:
         print(f"Greška: {exc}")
         return 2
-    res = simulate_grid(candles, lower, upper, cfg.grid_levels, cfg.grid_order_quote, cfg.fee_rate, args.balance, sym)
+    manual = cfg.grid_lower > 0 and cfg.grid_upper > 0
+    recenter = cfg.grid_range_pct if cfg.grid_auto_recenter and not manual else None
+    res = simulate_grid(
+        candles, lower, upper, cfg.grid_levels, cfg.grid_order_quote, cfg.fee_rate, args.balance, sym,
+        recenter_pct=recenter,
+    )
     print(res.summary())
     return 0
 

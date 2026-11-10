@@ -99,6 +99,7 @@ class Config:
     grid_range_pct: float = 8.0
     grid_levels: int = 8
     grid_order_quote: float = 6.0
+    grid_auto_recenter: bool = True
 
     @property
     def granularity_seconds(self) -> int:
@@ -141,6 +142,7 @@ class Config:
             grid_range_pct=_float("GRID_RANGE_PCT", 8.0),
             grid_levels=_int("GRID_LEVELS", 8),
             grid_order_quote=_float("GRID_ORDER_QUOTE", 6.0),
+            grid_auto_recenter=_bool("GRID_AUTO_RECENTER", True),
             oanda_token=_get("OANDA_TOKEN"),
             oanda_account_id=_get("OANDA_ACCOUNT_ID"),
             oanda_env=_get("OANDA_ENV", "practice").lower(),

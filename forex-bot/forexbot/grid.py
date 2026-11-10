@@ -81,6 +81,7 @@ class GridSimResult:
     upper: float
     spacing: float
     time_in_range: float
+    recenters: int = 0
 
     def summary(self) -> str:
         ret = (self.end_value / self.start_value - 1) * 100
@@ -88,8 +89,9 @@ class GridSimResult:
         per_month = self.cycles / max(self.days / 30, 1e-9)
         return (
             f"=== Grid backtest {self.symbol} ({self.days:.0f} dana) ===\n"
-            f"Raspon: {self.lower:.6g} - {self.upper:.6g}, razmak {self.spacing:.2f}%\n"
-            f"Cijena u rasponu: {self.time_in_range * 100:.0f}% vremena\n"
+            f"Raspon{' (zadnji)' if self.recenters else ''}: {self.lower:.6g} - {self.upper:.6g}, razmak {self.spacing:.2f}%\n"
+            + (f"Automatski pomaknut prema gore: {self.recenters} puta\n" if self.recenters else "")
+            + f"Cijena u rasponu: {self.time_in_range * 100:.0f}% vremena\n"
             f"Završeni krugovi (kupi->prodaj): {self.cycles} (~{per_month:.1f} mjesečno)\n"
             f"Zarada od krugova: {self.grid_profit:+.2f}\n"
             f"Ukupno: {self.start_value:.2f} -> {self.end_value:.2f} ({ret:+.1f}%)\n"
@@ -106,7 +108,10 @@ def simulate_grid(
     fee_rate: float,
     start_quote: float,
     symbol: str = "",
+    recenter_pct: Optional[float] = None,
 ) -> GridSimResult:
+    """recenter_pct: ako je zadan, raspon se pomiče prema gore (±recenter_pct oko cijene)
+    kad cijena izađe iznad raspona, a nema kupljenog coina - isto kao live bot."""
     levels = grid_levels(lower, upper, n)
     price0 = candles[0].open
     cash = start_quote
@@ -115,13 +120,27 @@ def simulate_grid(
     cycles = 0
     profit = 0.0
     in_range = 0
+    recenters = 0
 
-    for i in sorted((i for i in range(n) if levels[i] < price0), reverse=True):
-        if cash >= order_quote:
-            cash -= order_quote
-            buys.add(i)
+    def place_buys(price: float) -> None:
+        nonlocal cash
+        for i in sorted((i for i in range(n) if levels[i] < price * 0.999), reverse=True):
+            if cash >= order_quote:
+                cash -= order_quote
+                buys.add(i)
+
+    place_buys(price0)
 
     for c in candles:
+        if recenter_pct and not sells and c.close > upper:
+            cash += len(buys) * order_quote
+            buys.clear()
+            r = recenter_pct / 100
+            lower, upper = c.close * (1 - r), c.close * (1 + r)
+            levels = grid_levels(lower, upper, n)
+            place_buys(c.close)
+            recenters += 1
+            continue
         if lower <= c.close <= upper:
             in_range += 1
         new_sells: Dict[int, Tuple[float, float]] = {}
@@ -149,7 +168,7 @@ def simulate_grid(
     days = len(candles) and _days_between(candles[0].time, candles[-1].time)
     return GridSimResult(
         symbol, days, start_quote, end_value, cycles, profit, hold_value,
-        lower, upper, spacing_pct(lower, upper, n), in_range / len(candles),
+        lower, upper, spacing_pct(lower, upper, n), in_range / len(candles), recenters,
     )
 
 
@@ -224,7 +243,7 @@ class GridBot:
                 self.tg.send(GRID_HELP)
 
     # ---------------------------------------------------------------- setup
-    def init_grid(self) -> None:
+    def init_grid(self, carry: Optional[Dict[str, Any]] = None) -> None:
         price = self.client.book(self.symbol)["ask"]
         lower, upper = resolve_range(price, self.cfg)
         n = self.cfg.grid_levels
@@ -250,7 +269,10 @@ class GridBot:
             "started": self.now().isoformat(),
             "range_note": "",
             "dust": 0.0,
+            "recenters": 0,
         }
+        if carry:
+            self.state.grid.update(carry)
         free_start = self.client.balances().get(self.quote, {}).get("free", 0.0)
         free = free_start
         placed = 0
@@ -267,8 +289,9 @@ class GridBot:
                 free -= cost
                 placed += 1
         self._save()
+        title = "🔼 Raspon automatski pomaknut prema gore" if carry else "🕸 Grid postavljen"
         msg = (
-            f"🕸 Grid postavljen za {self.symbol}\n"
+            f"{title} za {self.symbol}\n"
             f"Raspon {lower:.6g} - {upper:.6g} ({n} razina, razmak {spacing_pct(lower, upper, n):.2f}%)\n"
             f"Trenutna cijena {price:.6g} | slobodno {free_start:.2f} {self.quote}\n"
             f"Postavljeno {placed} kupnji po ~{self.cfg.grid_order_quote:g} {self.quote} ispod cijene.\n"
@@ -347,8 +370,59 @@ class GridBot:
                     self.tg.send(f"ℹ️ Nalog {rec['side']} na razini {rec['level']} je otkazan (ručno?).")
                     continue
                 self._on_fill(rec, executed, float(od.get("cummulativeQuoteQty", 0)), int(oid))
-        self._range_notice()
+        price = self.client.book(self.symbol)["bid"]
+        if self._maybe_recenter(price):
+            self._save()
+            return
+        self._range_notice(price)
         self._save()
+
+    def _can_recenter(self) -> bool:
+        return self.cfg.grid_auto_recenter and not (self.cfg.grid_lower > 0 and self.cfg.grid_upper > 0)
+
+    def _maybe_recenter(self, price: float) -> bool:
+        """Cijena iznad raspona i ništa ne držimo -> novi raspon oko trenutne cijene."""
+        if not self._can_recenter() or self.state.paused or price <= self.g["upper"]:
+            return False
+        if any(r["side"] == "SELL" for r in self.g["orders"].values()):
+            return False
+        if any(p["side"] == "SELL" for p in self.g.get("pending", [])):
+            return False
+        for oid, rec in list(self.g["orders"].items()):
+            if not self.cfg.dry_run:
+                try:
+                    res = self.client.cancel_order(self.symbol, int(oid))
+                except BinanceError as exc:
+                    # nalog se možda upravo izvršio - obradi ga i pokušaj kasnije
+                    log.warning("Otkazivanje %s nije uspjelo (%s), provjeravam nalog", oid, exc)
+                    od = self.client.get_order(self.symbol, int(oid))
+                    if od.get("status") == "FILLED":
+                        del self.g["orders"][oid]
+                        self._on_fill(rec, float(od["executedQty"]), float(od["cummulativeQuoteQty"]), int(oid))
+                    return False
+                executed = float((res or {}).get("executedQty", 0) or 0)
+                del self.g["orders"][oid]
+                if executed > 0:  # djelomično izvršen prije otkazivanja
+                    self._on_fill(rec, executed, float(res.get("cummulativeQuoteQty", 0)), int(oid))
+                    return False
+            else:
+                del self.g["orders"][oid]
+        self.g["pending"] = []
+        carry = {
+            "profit": self.g.get("profit", 0.0),
+            "cycles": self.g.get("cycles", 0),
+            "dust": self.g.get("dust", 0.0),
+            "recenters": self.g.get("recenters", 0) + 1,
+            "started": self.g.get("started", self.now().isoformat()),
+        }
+        log.info("Cijena %s iznad raspona, pomičem raspon", price)
+        self.state.grid = {}
+        try:
+            self.init_grid(carry=carry)
+        except ValueError as exc:
+            self.state.paused = True
+            self.tg.send(f"❌ Novi raspon nije postavljen: {exc}\nIspravi .env, pa pošalji /nastavi.")
+        return True
 
     def _base_commission(self, order_id: Optional[int], executed: float) -> float:
         """Koliko je provizije naplaćeno u kupljenom coinu (0 ako se plaća u BNB-u)."""
@@ -406,8 +480,7 @@ class GridBot:
         if ok:
             self.tg.send(f"✅ Postavljeno {ok} naloga koji ranije nisu uspjeli.")
 
-    def _range_notice(self) -> None:
-        price = self.client.book(self.symbol)["bid"]
+    def _range_notice(self, price: float) -> None:
         note = "below" if price < self.g["lower"] else "above" if price > self.g["upper"] else ""
         if note and note != self.g.get("range_note"):
             if note == "below":
@@ -416,10 +489,10 @@ class GridBot:
                     "Sve kupnje su vjerojatno izvršene; čekam da se cijena vrati. "
                     "Ako želiš izaći s gubitkom: /zatvori_sve"
                 )
-            else:
+            elif not self._can_recenter():
                 self.tg.send(
-                    f"🚀 Cijena {price:.6g} je iznad raspona ({self.g['upper']:.6g}). Sve je prodano sa zaradom; "
-                    "za novi raspon pošalji /zatvori_sve pa ponovno pokreni bota."
+                    f"🚀 Cijena {price:.6g} je iznad raspona ({self.g['upper']:.6g}). "
+                    "Za novi raspon pošalji /zatvori_sve pa /nastavi."
                 )
         self.g["range_note"] = note
 
@@ -436,7 +509,9 @@ class GridBot:
         lv = self.g["levels"]
         return (
             f"🕸 Grid {self.symbol} | cijena {price:.6g}\n"
-            f"Raspon {self.g['lower']:.6g} - {self.g['upper']:.6g}\n"
+            f"Raspon {self.g['lower']:.6g} - {self.g['upper']:.6g}"
+            + (f" (pomaknut {self.g['recenters']}x)" if self.g.get("recenters") else "")
+            + "\n"
             f"Čeka kupnju: {len(buys)} naloga" + (f" (najbliža @ {lv[buys[-1]]:.6g})" if buys else "") + "\n"
             f"Čeka prodaju: {len(sells)} naloga, držim {held:g} {self.base} (trenutno {unreal:+.2f} {self.quote})\n"
             f"Zarada od krugova: {self.g['profit']:+.2f} {self.quote} ({self.g['cycles']} krugova)\n"

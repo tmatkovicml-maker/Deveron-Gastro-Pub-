@@ -236,3 +236,74 @@ def test_order_error_reported_once_and_retry_announced(tmp_path):
     bot.check_once()
     assert any("Postavljeno 5 naloga koji ranije nisu uspjeli" in m for m in bot.tg.sent)
     assert "Zadnja greška" not in bot.status_text()
+
+
+# ------------------------------------------------------- automatsko pomicanje
+def test_recenter_up_when_price_leaves_range(tmp_path):
+    ex = FakeEx(price=2000.0)
+    bot = make_grid(tmp_path, ex)
+    bot.check_once()
+    bot.g["profit"] = 1.5  # zarada iz prije se prenosi
+    old_upper = bot.g["upper"]
+    old_buys = [o for o in ex.orders.values() if o["side"] == "BUY"]
+    ex.price = old_upper * 1.02
+    bot.check_once()
+    assert all(o["status"] == "CANCELED" for o in old_buys)
+    assert bot.g["lower"] > 2000 * 0.95 and bot.g["recenters"] == 1
+    assert bot.g["profit"] == 1.5
+    new_buys = [o for o in ex.orders.values() if o["status"] == "NEW"]
+    assert new_buys and all(o["price"] < ex.price for o in new_buys)
+    assert "pomaknut prema gore" in bot.tg.sent[-1]
+
+
+def test_no_recenter_while_holding_coin(tmp_path):
+    ex = FakeEx(price=2000.0)
+    bot = make_grid(tmp_path, ex)
+    bot.check_once()
+    lv = bot.g["levels"]
+    ex.fill("BUY", lambda p: p == pytest.approx(lv[3]))
+    bot.check_once()  # sad drži ETH i čeka prodaju
+    ex.price = bot.g["upper"] * 1.02
+    # prodaja nije izvršena (npr. preskok cijene) -> ne smije pomaknuti
+    bot.check_once()
+    assert bot.g.get("recenters", 0) == 0
+
+
+def test_no_recenter_when_disabled_or_manual(tmp_path):
+    ex = FakeEx(price=2000.0)
+    bot = make_grid(tmp_path, ex, grid_auto_recenter=False)
+    bot.check_once()
+    ex.price = bot.g["upper"] * 1.05
+    bot.check_once()
+    assert bot.g.get("recenters", 0) == 0
+
+
+def test_recenter_aborts_if_buy_filled_meanwhile(tmp_path):
+    ex = FakeEx(price=2000.0)
+    bot = make_grid(tmp_path, ex)
+    bot.check_once()
+    lv = bot.g["levels"]
+    filled = ex.fill("BUY", lambda p: p == pytest.approx(lv[4]))
+    from forexbot.binance import BinanceError
+
+    def cancel(s, oid):
+        if oid == filled["orderId"]:
+            raise BinanceError("Unknown order sent.")
+        ex.orders[oid]["status"] = "CANCELED"
+
+    ex.cancel_order = cancel
+    ex.open_orders = lambda s: [o for o in ex.orders.values() if o["status"] == "NEW" or o is filled]
+    ex.price = bot.g["upper"] * 1.02
+    bot.check_once()
+    assert bot.g.get("recenters", 0) == 0
+    assert any(o["side"] == "SELL" for o in ex.orders.values())  # kupnja je obrađena
+
+
+def test_simulation_recenter_follows_uptrend():
+    closes = [100 * (1.002 ** i) for i in range(400)]  # stalni rast ~120%
+    candles = make_candles(closes, wiggle=0.5)
+    fixed = simulate_grid(candles, 92, 108, 8, 6, 0.001, 50)
+    moving = simulate_grid(candles, 92, 108, 8, 6, 0.001, 50, recenter_pct=8)
+    assert fixed.recenters == 0 and moving.recenters > 0
+    assert moving.cycles > fixed.cycles
+    assert "pomaknut prema gore" in moving.summary()
