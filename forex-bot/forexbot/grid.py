@@ -23,7 +23,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from .binance import BinanceClient, BinanceError
 from .config import Config
-from .risk import floor_to_step
+from .risk import ceil_to_step, floor_to_step
 from .state import State
 from .strategy import Candle
 from .telegram import Telegram
@@ -181,6 +181,7 @@ class GridBot:
         self.state_path = cfg.data_dir / "state_grid.json"
         self.state = State.load(self.state_path)
         self._running = True
+        self._last_error = ""
 
     @property
     def g(self) -> Dict[str, Any]:
@@ -250,28 +251,47 @@ class GridBot:
             "range_note": "",
             "dust": 0.0,
         }
-        free = self.client.balances().get(self.quote, {}).get("free", 0.0)
+        free_start = self.client.balances().get(self.quote, {}).get("free", 0.0)
+        free = free_start
         placed = 0
+        self._last_error = ""
+        log.info("Grid %s: cijena %s, slobodno %.2f %s", self.symbol, price, free, self.quote)
         for i in sorted((i for i in range(n) if levels[i] < price * 0.999), reverse=True):
-            if free < self.cfg.grid_order_quote:
+            qty = ceil_to_step(self.cfg.grid_order_quote / levels[i], self.info["step"])
+            cost = qty * levels[i]
+            if free < cost:
+                if placed == 0:
+                    self._last_error = f"premalo slobodnog {self.quote} u Spotu ({free:.2f}, treba {cost:.2f} po nalogu)"
                 break
-            if self._place("BUY", i, self.cfg.grid_order_quote / levels[i], self.cfg.grid_order_quote):
-                free -= self.cfg.grid_order_quote
+            if self._place("BUY", i, qty, cost):
+                free -= cost
                 placed += 1
         self._save()
-        self.tg.send(
+        msg = (
             f"🕸 Grid postavljen za {self.symbol}\n"
             f"Raspon {lower:.6g} - {upper:.6g} ({n} razina, razmak {spacing_pct(lower, upper, n):.2f}%)\n"
-            f"Trenutna cijena {price:.6g}\n"
-            f"Postavljeno {placed} kupnji po {self.cfg.grid_order_quote:g} {self.quote} ispod cijene.\n"
+            f"Trenutna cijena {price:.6g} | slobodno {free_start:.2f} {self.quote}\n"
+            f"Postavljeno {placed} kupnji po ~{self.cfg.grid_order_quote:g} {self.quote} ispod cijene.\n"
             f"Kad cijena padne do neke razine, kupit ću; kad zatim naraste za jednu razinu, prodat ću."
         )
+        if placed == 0:
+            reason = self._last_error or "nepoznat razlog"
+            msg += (
+                f"\n\n⚠️ Nijedna kupnja nije postavljena: {reason}.\n"
+                "Kad ispraviš, pošalji /zatvori_sve pa /nastavi."
+            )
+        self.tg.send(msg)
 
     def _place(self, side: str, level: int, qty: float, cost: float) -> bool:
         price = self.g["levels"][level]
         qty = floor_to_step(qty, self.info["step"])
         if qty < self.info["min_qty"] or qty * price < self.info["min_notional"]:
-            log.warning("Nalog %s na razini %s je premali (%s)", side, level, qty)
+            self._last_error = (
+                f"nalog {side} je premali ({qty:g} {self.base} = {qty * price:.2f} {self.quote}, "
+                f"Binance minimum {self.info['min_notional']:g}) - povećaj GRID_ORDER_QUOTE"
+            )
+            log.warning(self._last_error)
+            self._notify_error()
             return False
         if self.cfg.dry_run:
             oid = f"dry-{side}-{level}-{int(time.time() * 1000)}"
@@ -281,9 +301,19 @@ class GridBot:
             except BinanceError as exc:
                 log.error("Nalog %s @ %s nije uspio: %s", side, price, exc)
                 self.g["pending"].append({"side": side, "level": level, "qty": qty, "cost": cost})
+                self._last_error = str(exc)
+                self._notify_error()
                 return False
         self.g["orders"][oid] = {"side": side, "level": level, "qty": qty, "cost": cost}
+        log.info("Postavljen %s %s %s @ %s", side, qty, self.base, price)
+        self.g["last_error"] = ""
         return True
+
+    def _notify_error(self) -> None:
+        """Javi grešku na Telegram, ali istu grešku samo jednom."""
+        if self.g.get("last_error") != self._last_error:
+            self.g["last_error"] = self._last_error
+            self.tg.send(f"❌ Nalog nije uspio: {self._last_error}\nPokušavam ponovno svakih {self.cfg.poll_seconds} s.")
 
     # ---------------------------------------------------------------- check
     def check_once(self) -> None:
@@ -366,10 +396,15 @@ class GridBot:
 
     def _retry_pending(self) -> None:
         pending, self.g["pending"] = self.g.get("pending", []), []
+        ok = 0
         for p in pending:
             if p["side"] == "BUY" and self.state.paused:
+                self.g["pending"].append(p)
                 continue
-            self._place(p["side"], p["level"], p["qty"], p["cost"])
+            if self._place(p["side"], p["level"], p["qty"], p["cost"]):
+                ok += 1
+        if ok:
+            self.tg.send(f"✅ Postavljeno {ok} naloga koji ranije nisu uspjeli.")
 
     def _range_notice(self) -> None:
         price = self.client.book(self.symbol)["bid"]
@@ -405,7 +440,9 @@ class GridBot:
             f"Čeka kupnju: {len(buys)} naloga" + (f" (najbliža @ {lv[buys[-1]]:.6g})" if buys else "") + "\n"
             f"Čeka prodaju: {len(sells)} naloga, držim {held:g} {self.base} (trenutno {unreal:+.2f} {self.quote})\n"
             f"Zarada od krugova: {self.g['profit']:+.2f} {self.quote} ({self.g['cycles']} krugova)\n"
-            f"Status: {'⏸ pauzirano' if self.state.paused else '▶️ aktivan'}"
+            + (f"Nalozi na čekanju (nisu uspjeli): {len(self.g['pending'])}\n" if self.g.get("pending") else "")
+            + (f"Zadnja greška: {self.g['last_error']}\n" if self.g.get("last_error") else "")
+            + f"Status: {'⏸ pauzirano' if self.state.paused else '▶️ aktivan'}"
         )
 
     def close_all(self) -> str:

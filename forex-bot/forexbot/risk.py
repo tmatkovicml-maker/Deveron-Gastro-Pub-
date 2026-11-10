@@ -84,3 +84,15 @@ def spot_quantity(
     loss_per_unit = sl_distance + entry * fee_rate * 2
     qty = min(equity * risk_fraction / loss_per_unit, max_cost / (entry * (1 + fee_rate)))
     return max(0.0, floor_to_step(qty, step))
+
+
+def ceil_to_step(value: float, step: float) -> float:
+    """Zaokruži prema gore na dopušteni korak (da nalog ne padne ispod minimuma)."""
+    if step <= 0:
+        return value
+    d_step = Decimal(str(step))
+    d = Decimal(str(value))
+    q = d // d_step
+    if q * d_step < d:
+        q += 1
+    return float(q * d_step)

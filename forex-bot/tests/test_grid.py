@@ -195,3 +195,44 @@ def test_grid_config_validation():
     with pytest.raises(ConfigError):
         Config(broker="binance", strategy_mode="grid", grid_lower=100).validate()
     Config(broker="binance", strategy_mode="grid", grid_lower=100, grid_upper=120).validate()
+
+
+def test_buy_rounded_up_to_meet_minimum(tmp_path):
+    # korak 0.001 ETH: 6/1900 = 0.00316 -> prema dolje 0.003 (5.7 USDC), prema gore 0.004 (7.6)
+    ex = FakeEx(price=2000.0)
+    bot = make_grid(tmp_path, ex)
+    bot.info = dict(INFO, step=0.001, min_qty=0.001, min_notional=5.7)
+    bot.check_once()
+    buys = [o for o in ex.orders.values() if o["side"] == "BUY"]
+    assert len(buys) == 5 and all(o["qty"] * o["price"] >= 5.7 for o in buys)
+
+
+def test_zero_placed_explains_why(tmp_path):
+    ex = FakeEx(usdc=3.0)
+    bot = make_grid(tmp_path, ex)
+    bot.check_once()
+    assert "Nijedna kupnja nije postavljena" in bot.tg.sent[-1]
+    assert "premalo slobodnog USDC" in bot.tg.sent[-1]
+
+
+def test_order_error_reported_once_and_retry_announced(tmp_path):
+    ex = FakeEx()
+    calls = {"n": 0}
+    real = ex.limit_order
+
+    def flaky(*a):
+        calls["n"] += 1
+        if calls["n"] <= 5:
+            from forexbot.binance import BinanceError
+            raise BinanceError("HTTP 401 (-2015): Invalid API-key, IP, or permissions for action")
+        return real(*a)
+
+    ex.limit_order = flaky
+    bot = make_grid(tmp_path, ex)
+    bot.check_once()
+    errors = [m for m in bot.tg.sent if m.startswith("❌")]
+    assert len(errors) == 1 and "-2015" in errors[0]
+    assert "-2015" in bot.tg.sent[-1]  # poruka o postavljanju objašnjava razlog
+    bot.check_once()
+    assert any("Postavljeno 5 naloga koji ranije nisu uspjeli" in m for m in bot.tg.sent)
+    assert "Zadnja greška" not in bot.status_text()
