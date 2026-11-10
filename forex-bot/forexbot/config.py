@@ -100,6 +100,8 @@ class Config:
     grid_levels: int = 8
     grid_order_quote: float = 6.0
     grid_auto_recenter: bool = True
+    report_weekday: int = 6  # 0=pon ... 6=ned
+    report_hour_utc: int = 19  # 19 UTC = 20h zimi / 21h ljeti u Hrvatskoj
 
     @property
     def granularity_seconds(self) -> int:
@@ -143,6 +145,8 @@ class Config:
             grid_levels=_int("GRID_LEVELS", 8),
             grid_order_quote=_float("GRID_ORDER_QUOTE", 6.0),
             grid_auto_recenter=_bool("GRID_AUTO_RECENTER", True),
+            report_weekday=_int("REPORT_WEEKDAY", 6),
+            report_hour_utc=_int("REPORT_HOUR_UTC", 19),
             oanda_token=_get("OANDA_TOKEN"),
             oanda_account_id=_get("OANDA_ACCOUNT_ID"),
             oanda_env=_get("OANDA_ENV", "practice").lower(),
@@ -208,6 +212,8 @@ class Config:
                     raise ConfigError("GRID_RANGE_PCT mora biti između 1 i 50")
                 if self.grid_order_quote <= 0:
                     raise ConfigError("GRID_ORDER_QUOTE mora biti veći od 0")
+            if not 0 <= self.report_weekday <= 6 or not 0 <= self.report_hour_utc <= 23:
+                raise ConfigError("REPORT_WEEKDAY mora biti 0-6, a REPORT_HOUR_UTC 0-23")
             if not 0 < self.max_position_fraction <= 1:
                 raise ConfigError("MAX_POSITION_FRACTION mora biti između 0 i 1")
 

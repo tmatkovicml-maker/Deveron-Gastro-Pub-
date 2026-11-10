@@ -21,6 +21,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
+from . import reports
 from .binance import BinanceClient, BinanceError
 from .config import Config
 from .risk import ceil_to_step, floor_to_step
@@ -36,6 +37,7 @@ GRID_HELP = (
     "/pauza - ne postavljaj nove kupnje (prodaje se i dalje izvršavaju)\n"
     "/nastavi - nastavi\n"
     "/zatvori_sve - otkaži sve naloge, prodaj kupljeno i ugasi grid\n"
+    "/izvjestaj - izvještaj od početka (stiže i sam svake nedjelje navečer)\n"
     "/pomoc - ova poruka"
 )
 
@@ -239,6 +241,11 @@ class GridBot:
                 self.tg.send("▶️ Nastavljam.")
             elif cmd == "/zatvori_sve":
                 self.tg.send(self.close_all())
+            elif cmd in ("/izvjestaj", "/izvještaj"):
+                price = self.client.book(self.symbol)["bid"]
+                if not self.state.report:
+                    self._reports(price)
+                self.tg.send(self.report_text(price))
             else:
                 self.tg.send(GRID_HELP)
 
@@ -350,6 +357,9 @@ class GridBot:
                 self.state.paused = True
                 self._save()
                 self.tg.send(f"❌ Grid nije postavljen: {exc}\nIspravi .env, pa pošalji /nastavi.")
+            if self.g:
+                self._reports(self.client.book(self.symbol)["bid"])
+                self._save()
             return
         if self.g.get("symbol") != self.symbol:
             log.error("Spremljeni grid je za %s, a postavke za %s. Pošalji /zatvori_sve.", self.g.get("symbol"), self.symbol)
@@ -371,11 +381,61 @@ class GridBot:
                     continue
                 self._on_fill(rec, executed, float(od.get("cummulativeQuoteQty", 0)), int(oid))
         price = self.client.book(self.symbol)["bid"]
+        self._reports(price)
         if self._maybe_recenter(price):
             self._save()
             return
         self._range_notice(price)
         self._save()
+
+    # ------------------------------------------------------------ izvještaji
+    def _account_value(self, price: float) -> float:
+        bal = self.client.balances()
+        q = bal.get(self.quote, {})
+        b = bal.get(self.base, {})
+        return q.get("free", 0.0) + q.get("locked", 0.0) + (b.get("free", 0.0) + b.get("locked", 0.0)) * price
+
+    def _held(self, price: float) -> Tuple[float, float]:
+        sells = [r for r in self.g.get("orders", {}).values() if r["side"] == "SELL"]
+        held = sum(r["qty"] for r in sells)
+        unreal = held * price * (1 - self.cfg.fee_rate) - sum(r["cost"] for r in sells)
+        return held, unreal
+
+    def report_text(self, price: float) -> str:
+        held, unreal = self._held(price)
+        return reports.weekly_text(
+            self.state.report, self.now(), self._account_value(price), price, held, unreal,
+            self.symbol, self.base, self.quote,
+        )
+
+    def _reports(self, price: float) -> None:
+        now = self.now()
+        r = self.state.report
+        today = now.strftime("%Y-%m-%d")
+        due = reports.last_scheduled(now, self.cfg.report_weekday, self.cfg.report_hour_utc)
+        weekly_due = bool(r) and datetime.fromisoformat(r["last_weekly"]) < due
+        if r and r.get("last_daily") == today and not weekly_due:
+            return
+        value = self._account_value(price)
+        if not r:
+            r = self.state.report = reports.new_baseline(now, value, price)
+        if r.get("last_daily") != today:
+            held, _ = self._held(price)
+            reports.append_daily(self.cfg.data_dir / "povijest.csv", {
+                "datum": today,
+                "cijena": round(price, 2),
+                "vrijednost": round(value, 2),
+                "krugova_ukupno": r["cycles_total"],
+                "zarada_krugova": round(r["profit_total"], 4),
+                "drzim": held,
+            })
+            r["last_daily"] = today
+        if weekly_due:
+            self.tg.send(self.report_text(price))
+            r.update(
+                week_start=now.isoformat(), week_value=value,
+                week_cycles=r["cycles_total"], week_profit=r["profit_total"], last_weekly=now.isoformat(),
+            )
 
     def _can_recenter(self) -> bool:
         return self.cfg.grid_auto_recenter and not (self.cfg.grid_lower > 0 and self.cfg.grid_upper > 0)
@@ -456,6 +516,9 @@ class GridBot:
             pl = proceeds - rec["cost"]
             self.g["profit"] += pl
             self.g["cycles"] += 1
+            if self.state.report:
+                self.state.report["cycles_total"] += 1
+                self.state.report["profit_total"] += pl
             msg = (
                 f"💰 PRODAO {executed:g} {self.base} @ {levels[lvl]:.6g}\n"
                 f"Zarada ovog kruga: {pl:+.3f} {self.quote} (nakon provizija)\n"
