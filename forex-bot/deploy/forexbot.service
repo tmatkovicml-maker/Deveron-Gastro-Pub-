@@ -1,0 +1,15 @@
+[Unit]
+Description=Forex trading bot
+After=network-online.target time-sync.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=%USER%
+WorkingDirectory=%DIR%
+ExecStart=%DIR%/.venv/bin/python -m forexbot run
+Restart=always
+RestartSec=30
+
+[Install]
+WantedBy=multi-user.target
