@@ -18,6 +18,7 @@ class State:
     last_candle: Dict[str, str] = field(default_factory=dict)
     known_trades: List[str] = field(default_factory=list)
     positions: Dict[str, Dict[str, Any]] = field(default_factory=dict)  # Binance spot
+    grid: Dict[str, Any] = field(default_factory=dict)  # grid bot
 
     @classmethod
     def load(cls, path: Path) -> "State":

@@ -92,6 +92,13 @@ class Config:
     fee_rate: float = 0.001
     max_spread_pct: float = 0.15
     max_position_fraction: float = 0.45
+    # --- strategija: signal (EMA crossover) ili grid (kupi nisko, prodaj visoko) ---
+    strategy_mode: str = "signal"
+    grid_lower: float = 0.0  # 0 = automatski oko trenutne cijene
+    grid_upper: float = 0.0
+    grid_range_pct: float = 8.0
+    grid_levels: int = 8
+    grid_order_quote: float = 6.0
 
     @property
     def granularity_seconds(self) -> int:
@@ -114,6 +121,9 @@ class Config:
         # Testnet ima USDT parove; u EU se na pravom računu trguje s EUR (ili USDC) parovima.
         default_symbols = "BTCUSDT,ETHUSDT" if testnet else "BTCEUR,ETHEUR"
         symbols = [s.strip().upper() for s in _get("SYMBOLS", default_symbols).split(",") if s.strip()]
+        strategy_mode = _get("STRATEGY", "signal").lower()
+        if strategy_mode == "grid":
+            symbols = [_get("GRID_SYMBOL", "ETHUSDT" if testnet else "ETHUSDC").upper()]
         default_gran = "H4" if broker == "binance" else "H1"
         instruments = [s.strip().upper() for s in _get("INSTRUMENTS", "EUR_USD,GBP_USD,USD_JPY,EUR_GBP").split(",") if s.strip()]
         cfg = cls(
@@ -125,6 +135,12 @@ class Config:
             fee_rate=_float("FEE_RATE", 0.001),
             max_spread_pct=_float("MAX_SPREAD_PCT", 0.15),
             max_position_fraction=_float("MAX_POSITION_FRACTION", 0.45),
+            strategy_mode=strategy_mode,
+            grid_lower=_float("GRID_LOWER", 0.0),
+            grid_upper=_float("GRID_UPPER", 0.0),
+            grid_range_pct=_float("GRID_RANGE_PCT", 8.0),
+            grid_levels=_int("GRID_LEVELS", 8),
+            grid_order_quote=_float("GRID_ORDER_QUOTE", 6.0),
             oanda_token=_get("OANDA_TOKEN"),
             oanda_account_id=_get("OANDA_ACCOUNT_ID"),
             oanda_env=_get("OANDA_ENV", "practice").lower(),
@@ -179,6 +195,17 @@ class Config:
         else:
             if not self.symbols:
                 raise ConfigError("SYMBOLS ne smije biti prazan")
+            if self.strategy_mode not in ("signal", "grid"):
+                raise ConfigError("STRATEGY mora biti 'signal' ili 'grid'")
+            if self.strategy_mode == "grid":
+                if not 2 <= self.grid_levels <= 50:
+                    raise ConfigError("GRID_LEVELS mora biti između 2 i 50")
+                if (self.grid_lower > 0) != (self.grid_upper > 0) or (self.grid_lower and self.grid_lower >= self.grid_upper):
+                    raise ConfigError("Postavi oba GRID_LOWER i GRID_UPPER (donja < gornja) ili nijedan")
+                if not 1 <= self.grid_range_pct <= 50:
+                    raise ConfigError("GRID_RANGE_PCT mora biti između 1 i 50")
+                if self.grid_order_quote <= 0:
+                    raise ConfigError("GRID_ORDER_QUOTE mora biti veći od 0")
             if not 0 < self.max_position_fraction <= 1:
                 raise ConfigError("MAX_POSITION_FRACTION mora biti između 0 i 1")
 

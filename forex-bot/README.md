@@ -1,5 +1,10 @@
 # Trading bot (Binance + Raspberry Pi)
 
+**Dvije strategije** (`STRATEGY` u `.env`):
+- **`grid`**: "kupi nisko, prodaj visoko" s malim nalozima (npr. 6 $). Trguje češće
+  i dobra je za učenje. Opis je ispod u odjeljku *Grid bot*.
+- **`signal`**: EMA crossover, nekoliko većih trejdova mjesečno.
+
 Automatski bot koji trguje po signalima, radi stalno na Raspberry Pi-ju, a s
 mobitela ga pratiš i kontroliraš preko Telegrama.
 
@@ -11,7 +16,37 @@ mobitela ga pratiš i kontroliraš preko Telegrama.
 > Najmanje mjesec dana koristi samo **Binance Testnet** (virtualni novac), a kasnije
 > ulaži samo novac koji si možeš priuštiti izgubiti.
 
-## Kako radi
+## Grid bot (za male iznose i učenje)
+
+Primjer s ETH po 3000 $, rasponom ±8% i 8 razina (razmak ~2%):
+
+```
+3240 ─────────────────────  razina 8
+3176 ─────────────────────  razina 7
+ ...
+3000  ◄── trenutna cijena
+2940 ── KUPI 6 $ ─────────  razina 3   → kad se izvrši: PRODAJ @ 3000 (razina 4)
+2882 ── KUPI 6 $ ─────────  razina 2   → kad se izvrši: PRODAJ @ 2940 (razina 3)
+ ...
+2760 ── KUPI 6 $ ─────────  razina 0
+```
+
+1. Ispod cijene postavi kupnje po 6 $, onoliko koliko imaš novca.
+2. Kad cijena padne i kupnja se izvrši, odmah postavi prodaju jednu razinu više (+2%).
+3. Kad se prodaja izvrši, zaradio si oko 1,8% od 6 $ (oko 0,11 $) nakon provizija, a kupnja se ponovno postavlja.
+4. Na Telegram stiže poruka za svaku kupnju i prodaju, s objašnjenjem.
+
+**Kad zarađuje:** kad cijena skače gore-dolje unutar raspona.
+**Kad gubi:** kad cijena padne ispod raspona i ostane dolje. Tada držiš kupljeni ETH u minusu, kao da si ga kupio ručno.
+Kad cijena naraste iznad raspona, sve je prodano sa zaradom, i za novi raspon pošalješ `/zatvori_sve`, pa `/nastavi`.
+
+**Savjeti:**
+- Uključi **"Use BNB to pay fees"** na Binanceu (i drži par dolara u BNB-u). Dobivaš 25% popusta na proviziju i bot može prodati točno onoliko koliko je kupio.
+- Ne stavljaj previše razina: razmak mora biti **barem 0,5%**, inače provizije pojedu zaradu. Bot to sam provjerava.
+- Prije starta pokreni backtest (`backtest.bat`). Pokazat će koliko bi krugova bilo u zadnjih godinu dana i usporedbu sa "samo kupi i drži".
+- U EU se USDT ne može kupovati (MiCA pravila). Koristi **USDC** ili **EUR** parove. Ako imaš USDT, zamijeni ga u USDC preko *Binance Convert*.
+
+## Signalni bot: kako radi
 
 | | |
 |---|---|

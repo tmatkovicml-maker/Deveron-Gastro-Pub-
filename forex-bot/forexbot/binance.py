@@ -201,6 +201,31 @@ class BinanceClient:
             signed=True,
         )
 
+    def limit_order(self, symbol: str, side: str, quantity: float, price: float) -> Dict[str, Any]:
+        info = self.symbol_info(symbol)
+        return self._request(
+            "POST",
+            "/api/v3/order",
+            {
+                "symbol": symbol,
+                "side": side,
+                "type": "LIMIT",
+                "timeInForce": "GTC",
+                "quantity": fmt_decimal(quantity, info["step"]),
+                "price": fmt_decimal(price, info["tick"]),
+            },
+            signed=True,
+        )
+
+    def order_trades(self, symbol: str, order_id: int) -> List[Dict[str, Any]]:
+        return self._request("GET", "/api/v3/myTrades", {"symbol": symbol, "orderId": order_id}, signed=True)
+
+    def open_orders(self, symbol: str) -> List[Dict[str, Any]]:
+        return self._request("GET", "/api/v3/openOrders", {"symbol": symbol}, signed=True)
+
+    def cancel_order(self, symbol: str, order_id: int) -> Dict[str, Any]:
+        return self._request("DELETE", "/api/v3/order", {"symbol": symbol, "orderId": order_id}, signed=True)
+
     def oco_sell(self, symbol: str, quantity: float, take_profit: float, stop_loss: float) -> Dict[str, Any]:
         """OCO prodaja: take-profit (LIMIT_MAKER iznad) + stop-loss (ispod). Izvrši se samo jedan."""
         info = self.symbol_info(symbol)

@@ -1,8 +1,7 @@
 @echo off
-REM Backtest na 3 godine pravih Binance cijena (BTC i ETH).
+REM Backtest na pravim Binance cijenama (parovi i strategija iz .env).
 chcp 65001 >nul
 cd /d "%~dp0"
 set PYTHONUTF8=1
-.venv\Scripts\python -m forexbot backtest --days 1095 --instrument BTCEUR
-.venv\Scripts\python -m forexbot backtest --days 1095 --instrument ETHEUR
+.venv\Scripts\python -m forexbot backtest --days 365 --balance 50
 pause

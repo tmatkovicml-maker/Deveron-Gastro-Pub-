@@ -11,8 +11,7 @@ case "${1:-run}" in
     ;;
   check)    .venv/bin/python -m forexbot check ;;
   backtest)
-    .venv/bin/python -m forexbot backtest --days 1095 --instrument BTCEUR
-    .venv/bin/python -m forexbot backtest --days 1095 --instrument ETHEUR
+    .venv/bin/python -m forexbot backtest --days 365 --balance 50
     ;;
   run)      .venv/bin/python -m forexbot run ;;
   *) echo "Koristi: bash start.sh setup|check|backtest|run"; exit 1 ;;

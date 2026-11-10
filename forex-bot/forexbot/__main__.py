@@ -93,7 +93,11 @@ def cmd_check(cfg: Config) -> int:
 
 def cmd_run(cfg: Config) -> int:
     tg = Telegram(cfg.telegram_token, cfg.telegram_chat_id)
-    if cfg.broker == "binance":
+    if cfg.broker == "binance" and cfg.strategy_mode == "grid":
+        from .grid import GridBot
+
+        bot = GridBot(cfg, make_binance(cfg), tg)
+    elif cfg.broker == "binance":
         from .spot_bot import SpotBot
 
         bot = SpotBot(cfg, make_binance(cfg), tg)
@@ -145,7 +149,34 @@ def cmd_backtest(cfg: Config, args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_backtest_grid(cfg: Config, args: argparse.Namespace) -> int:
+    from .grid import check_spacing, resolve_range, simulate_grid
+
+    sym = args.instrument or cfg.symbols[0]
+    if args.csv:
+        candles = load_csv(Path(args.csv))
+    else:
+        start = datetime.now(timezone.utc) - timedelta(days=args.days)
+        print(f"Dohvaćam {sym} 15-minutne svijeće od {start:%Y-%m-%d}...")
+        candles = BinanceClient(testnet=False).history(sym, "M15", int(start.timestamp() * 1000))
+        save_csv(candles, cfg.data_dir / "history" / f"{sym}_M15.csv")
+    if not candles:
+        print("Nema podataka.")
+        return 1
+    lower, upper = resolve_range(candles[0].open, cfg)
+    try:
+        check_spacing(lower, upper, cfg.grid_levels, cfg.fee_rate)
+    except ValueError as exc:
+        print(f"Greška: {exc}")
+        return 2
+    res = simulate_grid(candles, lower, upper, cfg.grid_levels, cfg.grid_order_quote, cfg.fee_rate, args.balance, sym)
+    print(res.summary())
+    return 0
+
+
 def cmd_backtest_binance(cfg: Config, args: argparse.Namespace) -> int:
+    if cfg.strategy_mode == "grid":
+        return cmd_backtest_grid(cfg, args)
     # povijest se uvijek uzima s pravog tržišta (javni podaci, ključ nije potreban)
     symbols = [args.instrument] if args.instrument else cfg.symbols
     client = BinanceClient(testnet=False)
