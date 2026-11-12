@@ -307,3 +307,43 @@ def test_simulation_recenter_follows_uptrend():
     assert fixed.recenters == 0 and moving.recenters > 0
     assert moving.cycles > fixed.cycles
     assert "pomaknut prema gore" in moving.summary()
+
+
+def test_auth_error_alerts_once_with_ip_and_recovers(tmp_path, monkeypatch):
+    from forexbot import grid as grid_mod
+    from forexbot.binance import BinanceError
+
+    monkeypatch.setattr(grid_mod, "public_ip", lambda: "93.1.2.3")
+    ex = FakeEx()
+    bot = make_grid(tmp_path, ex)
+    bot.tick()  # postavi grid
+    real = ex.open_orders
+
+    def broken(s):
+        raise BinanceError("HTTP 401 (-2015): Invalid API-key, IP, or permissions for action", 401, -2015)
+
+    ex.open_orders = broken
+    bot.tick()
+    bot.tick()
+    alerts = [m for m in bot.tg.sent if "ne može raditi s Binanceom" in m]
+    assert len(alerts) == 1 and "93.1.2.3" in alerts[0]
+    assert "VEZA S BINANCEOM NE RADI" in bot.status_text()
+    ex.open_orders = real
+    bot.tick()
+    assert "ponovno radi" in bot.tg.sent[-1]
+    assert "VEZA" not in bot.status_text()
+
+
+def test_network_blip_not_reported(tmp_path):
+    from forexbot.binance import BinanceError
+
+    ex = FakeEx()
+    bot = make_grid(tmp_path, ex)
+    bot.tick()
+    real = ex.open_orders
+    ex.open_orders = lambda s: (_ for _ in ()).throw(BinanceError("timeout"))
+    bot.tick()
+    bot.tick()
+    ex.open_orders = real
+    bot.tick()
+    assert not any("Binanceom" in m for m in bot.tg.sent)

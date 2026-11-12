@@ -17,6 +17,8 @@ from __future__ import annotations
 
 import logging
 import time
+
+import requests
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any, Callable, Dict, List, Optional, Tuple
@@ -183,6 +185,13 @@ def _days_between(t0: str, t1: str) -> float:
         return 0.0
 
 
+def public_ip() -> str:
+    try:
+        return requests.get("https://api.ipify.org", timeout=10).text.strip()
+    except requests.RequestException:
+        return "nepoznata (otvori api.ipify.org)"
+
+
 # ---------------------------------------------------------------- live bot
 class GridBot:
     def __init__(
@@ -203,6 +212,8 @@ class GridBot:
         self.state = State.load(self.state_path)
         self._running = True
         self._last_error = ""
+        self._conn_error = ""
+        self._fail_count = 0
 
     @property
     def g(self) -> Dict[str, Any]:
@@ -215,17 +226,51 @@ class GridBot:
             mode += ", DRY RUN"
         self.tg.send(f"🤖 Grid bot pokrenut ({mode}) za {self.symbol}.\n\n{GRID_HELP}")
         while self._running:
-            try:
-                self.handle_commands()
-                self.check_once()
-            except BinanceError as exc:
-                log.error("Binance greška: %s", exc)
-            except Exception:
-                log.exception("Neočekivana greška u petlji")
+            self.tick()
             time.sleep(self.cfg.poll_seconds)
+
+    def tick(self) -> None:
+        try:
+            self.handle_commands()
+            self.check_once()
+        except BinanceError as exc:
+            log.error("Binance greška: %s", exc)
+            self._connection_problem(exc)
+        except Exception:
+            log.exception("Neočekivana greška u petlji")
+        else:
+            self._connection_ok()
 
     def stop(self) -> None:
         self._running = False
+
+    # ------------------------------------------------------ veza s Binanceom
+    AUTH_CODES = (-2014, -2015, -1022)
+
+    def _connection_problem(self, exc: BinanceError) -> None:
+        self._fail_count += 1
+        auth = exc.code in self.AUTH_CODES or exc.status == 401
+        # greška ključa/IP-a odmah, mrežne greške tek ako potraju (~2 min)
+        if not auth and self._fail_count < 4:
+            return
+        key = "auth" if auth else "other"
+        if key == self._conn_error:
+            return
+        self._conn_error = key
+        msg = f"⚠️ Bot trenutno ne može raditi s Binanceom:\n{exc}"
+        if auth:
+            msg += (
+                f"\n\nNajvjerojatnije se promijenila tvoja IP adresa. Trenutna: {public_ip()}\n"
+                "Upiši je na Binanceu: API Management → Edit restrictions → IP access restrictions.\n"
+                "Ne šalji /zatvori_sve dok veza ne proradi - nalozi na Binanceu su sigurni."
+            )
+        self.tg.send(msg)
+
+    def _connection_ok(self) -> None:
+        self._fail_count = 0
+        if self._conn_error:
+            self._conn_error = ""
+            self.tg.send("✅ Veza s Binanceom ponovno radi. Nastavljam.")
 
     def handle_commands(self) -> None:
         for cmd in self.tg.poll_commands():
@@ -570,8 +615,10 @@ class GridBot:
         held_cost = sum(r["cost"] for r in sells)
         unreal = held * price * (1 - self.cfg.fee_rate) - held_cost
         lv = self.g["levels"]
+        warn = "⚠️ VEZA S BINANCEOM NE RADI - stanje naloga nije osvježeno!\n" if self._conn_error else ""
         return (
-            f"🕸 Grid {self.symbol} | cijena {price:.6g}\n"
+            warn
+            + f"🕸 Grid {self.symbol} | cijena {price:.6g}\n"
             f"Raspon {self.g['lower']:.6g} - {self.g['upper']:.6g}"
             + (f" (pomaknut {self.g['recenters']}x)" if self.g.get("recenters") else "")
             + "\n"
