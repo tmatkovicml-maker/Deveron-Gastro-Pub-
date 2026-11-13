@@ -1,0 +1,471 @@
+<!doctype html>
+<html lang="hr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b0f17">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Bot">
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icon.svg">
+<title>Grid Bot</title>
+<style>
+:root{
+  --bg:#0b0f17;--card:#121826;--card2:#161e2e;--line:#1f2a3c;--text:#e8edf6;--muted:#8a94a8;
+  --green:#2ebd85;--red:#f6465d;--yellow:#f0b90b;--blue:#4c8dff;
+  --r:16px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--text);font:15px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,sans-serif;-webkit-font-smoothing:antialiased}
+body{padding:calc(env(safe-area-inset-top) + 12px) 16px calc(env(safe-area-inset-bottom) + 32px)}
+.wrap{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+.num{font-variant-numeric:tabular-nums}
+.muted{color:var(--muted)}
+.up{color:var(--green)}.down{color:var(--red)}
+header{display:flex;align-items:center;gap:12px}
+header img{width:40px;height:40px;border-radius:11px}
+header h1{font-size:17px;font-weight:700;letter-spacing:.2px}
+header .sub{font-size:12px;color:var(--muted)}
+.pills{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.pill{font-size:11px;font-weight:700;padding:4px 9px;border-radius:999px;background:var(--card2);border:1px solid var(--line);white-space:nowrap}
+.pill.ok{color:var(--green);border-color:#1d4a3a}.pill.warn{color:var(--yellow);border-color:#4a3d12}.pill.bad{color:var(--red);border-color:#4d1d27}
+.pill.live{color:#fff;background:#3b1820;border-color:#6b2433}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px}
+.card h2{font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.hero{background:radial-gradient(120% 140% at 0% 0%,#1a2540 0%,var(--card) 55%);}
+.hero .label{font-size:13px;color:var(--muted)}
+.hero .value{font-size:40px;font-weight:800;letter-spacing:-1px;margin:2px 0 4px}
+.hero .value small{font-size:16px;font-weight:600;color:var(--muted);margin-left:6px;letter-spacing:0}
+.hero .row{display:flex;gap:18px;flex-wrap:wrap;font-size:14px}
+.stats{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+@media(min-width:640px){.stats{grid-template-columns:repeat(4,1fr)}}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px}
+.stat .k{font-size:12px;color:var(--muted)}
+.stat .v{font-size:22px;font-weight:750;margin-top:2px}
+.stat .s{font-size:12px;color:var(--muted);margin-top:1px}
+.tabs{margin-left:auto;display:flex;background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:3px;text-transform:none;letter-spacing:0}
+.tabs button{background:none;border:0;color:var(--muted);font:600 12px inherit;font-family:inherit;padding:5px 10px;border-radius:7px;cursor:pointer}
+.tabs button.on{background:#26324a;color:var(--text)}
+canvas{width:100%;display:block;touch-action:pan-y}
+#chart{height:300px}#eq{height:180px}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:10px}
+.legend i{display:inline-block;width:14px;height:0;border-top:2px dashed;vertical-align:middle;margin-right:5px}
+.ladder{display:flex;flex-direction:column;gap:4px}
+.lv{display:grid;grid-template-columns:28px 1fr auto auto;align-items:center;gap:10px;padding:7px 10px;border-radius:10px;background:var(--card2);font-size:14px}
+.lv .i{color:var(--muted);font-size:11px}
+.lv .d{font-size:12px;color:var(--muted);text-align:right;min-width:56px}
+.chip{font-size:11px;font-weight:700;padding:3px 8px;border-radius:7px;min-width:92px;text-align:center}
+.chip.buy{background:#0f3328;color:var(--green)}.chip.sell{background:#3a1520;color:var(--red)}.chip.none{background:transparent;color:#4b5568}
+.lv.price{background:linear-gradient(90deg,#3a2e05,#1a1a10);border:1px solid #5a4710;grid-template-columns:1fr auto}
+.lv.price b{color:var(--yellow)}
+.trades{display:flex;flex-direction:column}
+.tr{display:grid;grid-template-columns:34px 1fr auto;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+.tr:last-child{border-bottom:0}
+.tr .ic{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;font-weight:800}
+.tr .ic.b{background:#0f3328;color:var(--green)}.tr .ic.s{background:#3a1520;color:var(--red)}
+.tr .t1{font-weight:600}.tr .t2{font-size:12px;color:var(--muted)}
+.tr .pl{text-align:right;font-weight:700}
+.empty{color:var(--muted);font-size:14px;text-align:center;padding:18px 0}
+.controls{display:flex;gap:10px}
+.btn{flex:1;border:1px solid var(--line);background:var(--card2);color:var(--text);font:700 15px inherit;font-family:inherit;padding:14px;border-radius:12px;cursor:pointer}
+.btn.primary{background:var(--yellow);color:#111;border-color:var(--yellow)}
+.btn:disabled{opacity:.5}
+.settings{display:grid;grid-template-columns:1fr;gap:4px 16px;font-size:13px}
+@media(min-width:520px){.settings{grid-template-columns:repeat(2,1fr)}}
+.settings div{display:flex;justify-content:space-between;border-bottom:1px dashed var(--line);padding:5px 0}
+.banner{border-radius:12px;padding:12px 14px;font-size:14px;font-weight:600;display:none}
+.banner.show{display:block}
+.banner.bad{background:#3a1520;color:#ffb3bf;border:1px solid #6b2433}
+.banner.warn{background:#3a2e05;color:#ffe08a;border:1px solid #5a4710}
+#login{position:fixed;inset:0;background:var(--bg);display:none;align-items:center;justify-content:center;padding:24px;z-index:9}
+#login.show{display:flex}
+#login .box{width:100%;max-width:340px;text-align:center}
+#login img{width:72px;height:72px;border-radius:18px;margin-bottom:16px}
+#login h1{font-size:22px;margin-bottom:6px}
+#login input{width:100%;margin:18px 0 12px;background:var(--card);border:1px solid var(--line);color:var(--text);border-radius:12px;padding:14px;font-size:24px;text-align:center;letter-spacing:8px;font-family:inherit}
+#login .err{color:var(--red);font-size:14px;min-height:20px}
+#tip{position:fixed;pointer-events:none;background:#0d1320ee;border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:12px;display:none;z-index:5}
+footer{text-align:center;font-size:12px;color:var(--muted)}
+footer a{color:var(--muted)}
+</style>
+</head>
+<body>
+<div id="login"><form class="box" id="loginForm">
+  <img src="/icon.svg" alt="">
+  <h1>Grid Bot</h1>
+  <div class="muted">Upiši PIN koji ti je bot poslao na Telegram.</div>
+  <input id="pin" inputmode="numeric" autocomplete="one-time-code" maxlength="12" placeholder="••••••" aria-label="PIN">
+  <div class="err" id="pinErr"></div>
+  <button class="btn primary" type="submit" style="width:100%">Otvori</button>
+</form></div>
+
+<div class="wrap">
+  <header>
+    <img src="/icon.svg" alt="">
+    <div><h1 id="title">Grid Bot</h1><div class="sub" id="updated">učitavam…</div></div>
+    <div class="pills" id="pills"></div>
+  </header>
+
+  <div class="banner bad" id="connBanner">⚠️ Veza s Binanceom ne radi. Vjerojatno se promijenila IP adresa – provjeri Telegram. Podaci možda nisu svježi.</div>
+  <div class="banner warn" id="errBanner"></div>
+
+  <section class="card hero">
+    <div class="label">Vrijednost računa (USDC + coin)</div>
+    <div class="value num" id="value">–</div>
+    <div class="row">
+      <div>Od početka: <b class="num" id="sinceStart">–</b></div>
+      <div><span id="baseName">ETH</span>: <b class="num" id="price">–</b> <span class="num" id="priceChg"></span></div>
+    </div>
+  </section>
+
+  <div class="stats">
+    <div class="stat"><div class="k">Završeni krugovi</div><div class="v num" id="cycles">–</div><div class="s" id="cyclesSub">&nbsp;</div></div>
+    <div class="stat"><div class="k">Zarada od krugova</div><div class="v num" id="profit">–</div><div class="s" id="profitSub">&nbsp;</div></div>
+    <div class="stat"><div class="k">vs. samo kupi i drži</div><div class="v num" id="vsHold">–</div><div class="s" id="vsHoldSub">&nbsp;</div></div>
+    <div class="stat"><div class="k">Držim</div><div class="v num" id="held">–</div><div class="s num" id="unreal">&nbsp;</div></div>
+  </div>
+
+  <section class="card">
+    <h2>Cijena i grid
+      <div class="tabs" id="tfTabs"><button data-tf="24h" class="on">24h</button><button data-tf="7d">7 dana</button><button data-tf="30d">30 dana</button></div>
+    </h2>
+    <canvas id="chart"></canvas>
+    <div class="legend">
+      <span><i style="border-color:var(--green)"></i>kupnja čeka</span>
+      <span><i style="border-color:var(--red)"></i>prodaja čeka</span>
+      <span><i style="border-color:var(--yellow);border-top-style:solid"></i>cijena</span>
+      <span><b class="up">▲</b> kupio · <b class="down">▼</b> prodao</span>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Ljestve grida <span class="muted" style="text-transform:none;letter-spacing:0;font-weight:500;margin-left:auto" id="ladderInfo"></span></h2>
+    <div class="ladder" id="ladder"><div class="empty">Grid nije aktivan.</div></div>
+  </section>
+
+  <section class="card">
+    <h2>Vrijednost kroz vrijeme</h2>
+    <canvas id="eq"></canvas>
+    <div class="legend">
+      <span><i style="border-color:var(--yellow);border-top-style:solid"></i>grid bot</span>
+      <span><i style="border-color:var(--blue)"></i>da sam samo kupio i držao</span>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Zadnji potezi</h2>
+    <div class="trades" id="trades"><div class="empty">Još nema poteza.</div></div>
+  </section>
+
+  <section class="card">
+    <h2>Upravljanje</h2>
+    <div class="controls">
+      <button class="btn" id="pauseBtn">⏸ Pauza</button>
+      <button class="btn primary" id="resumeBtn">▶ Nastavi</button>
+    </div>
+    <div class="muted" style="font-size:12px;margin-top:10px">Pauza: bot ne postavlja nove kupnje; prodaje se i dalje izvršavaju. Za zatvaranje svega koristi /zatvori_sve na Telegramu.</div>
+  </section>
+
+  <section class="card">
+    <h2>Postavke</h2>
+    <div class="settings" id="settings"></div>
+  </section>
+
+  <footer>Osvježava se automatski · <a href="#" id="logout">odjava</a></footer>
+</div>
+<div id="tip"></div>
+
+<script>
+(() => {
+  "use strict";
+  const $ = id => document.getElementById(id);
+  const C = {green:"#2ebd85", red:"#f6465d", yellow:"#f0b90b", blue:"#4c8dff", grid:"#1f2a3c", muted:"#8a94a8", text:"#e8edf6"};
+  const store = {
+    get(k){ try { return localStorage.getItem(k); } catch(e){ return null; } },
+    set(k,v){ try { localStorage.setItem(k,v); } catch(e){} },
+    del(k){ try { localStorage.removeItem(k); } catch(e){} },
+  };
+  let pin = store.get("pin") || "";
+  let tf = store.get("tf") || "24h";
+  let snap = null, candles = [], hist = {daily:[], trades:[]};
+
+  // ---------- helpers
+  const fmt = (n, d=2) => n == null || isNaN(n) ? "–" : Number(n).toLocaleString("hr-HR", {minimumFractionDigits:d, maximumFractionDigits:d});
+  const fmtP = n => n == null ? "–" : fmt(n, n >= 100 ? 2 : n >= 1 ? 4 : 6);
+  const sign = (n, d=2) => (n > 0 ? "+" : n < 0 ? "−" : "") + fmt(Math.abs(n), d);
+  const pct = (a, b) => b ? (a / b - 1) * 100 : 0;
+  const cls = (el, n) => { el.classList.remove("up","down"); if (n > 0.0001) el.classList.add("up"); else if (n < -0.0001) el.classList.add("down"); };
+  const t = s => new Date(s).getTime();
+  const ago = ms => { const s = Math.round((Date.now()-ms)/1000); return s < 10 ? "upravo" : s < 60 ? `prije ${s}s` : s < 3600 ? `prije ${Math.round(s/60)} min` : `prije ${Math.round(s/3600)} h`; };
+  const dt = ms => new Date(ms).toLocaleString("hr-HR", {day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit"});
+
+  async function api(path, opts={}) {
+    const r = await fetch(path, {...opts, headers:{"X-Pin": pin, "Content-Type":"application/json", ...(opts.headers||{})}});
+    if (r.status === 401) { showLogin("Pogrešan PIN."); throw new Error("401"); }
+    if (!r.ok) throw new Error(await r.text());
+    return r.json();
+  }
+
+  // ---------- login
+  function showLogin(msg) { $("login").classList.add("show"); $("pinErr").textContent = msg || ""; setTimeout(() => $("pin").focus(), 50); }
+  $("loginForm").addEventListener("submit", async e => {
+    e.preventDefault(); pin = $("pin").value.trim(); $("pinErr").textContent = "Provjeravam…";
+    try { await api("/api/state"); store.set("pin", pin); $("login").classList.remove("show"); refreshAll(); }
+    catch (err) { if (err.message !== "401") $("pinErr").textContent = "Bot nije dostupan."; }
+  });
+  $("logout").addEventListener("click", e => { e.preventDefault(); store.del("pin"); pin = ""; showLogin(); });
+
+  // ---------- render: header, hero, stats
+  function renderState() {
+    if (!snap) return;
+    const g = snap.grid, r = snap.report, base = snap.base, q = snap.quote;
+    $("title").textContent = `${base}/${q} grid`;
+    $("baseName").textContent = base;
+    $("updated").textContent = "osvježeno " + ago(t(snap.updated));
+    const pills = [];
+    pills.push(snap.live ? ["PRAVI NOVAC","live"] : ["TESTNET","warn"]);
+    if (snap.dry_run) pills.push(["DRY RUN","warn"]);
+    if (snap.conn_error) pills.push(["VEZA NE RADI","bad"]);
+    else if (snap.paused) pills.push(["PAUZIRANO","warn"]);
+    else if (g) pills.push(["AKTIVAN","ok"]);
+    else pills.push(["NEAKTIVAN","warn"]);
+    $("pills").replaceChildren(...pills.map(([txt,c]) => { const s = document.createElement("span"); s.className = "pill " + c; s.textContent = txt; return s; }));
+    $("connBanner").classList.toggle("show", !!snap.conn_error);
+    const err = g && (g.last_error || (g.pending ? `${g.pending} naloga čeka ponovni pokušaj` : ""));
+    $("errBanner").textContent = err ? "⚠️ " + err : ""; $("errBanner").classList.toggle("show", !!err);
+
+    $("value").innerHTML = ""; $("value").append(fmt(snap.value), Object.assign(document.createElement("small"), {textContent: q}));
+    if (r) {
+      const d = snap.value - r.start_value, el = $("sinceStart");
+      el.textContent = `${sign(d)} (${sign(pct(snap.value, r.start_value),1)}%)`; cls(el, d);
+      const pc = $("priceChg"); pc.textContent = `${sign(pct(snap.price, r.start_price),1)}%`; cls(pc, snap.price - r.start_price);
+      const hold = r.start_value * snap.price / r.start_price, vs = snap.value - hold;
+      const v = $("vsHold"); v.textContent = sign(vs); cls(v, vs);
+      $("vsHoldSub").textContent = vs >= 0 ? "grid je bolji 👍" : "držanje je bolje";
+      $("cycles").textContent = r.cycles_total;
+      const days = Math.max((Date.now() - t(r.start)) / 864e5, 1/24);
+      $("cyclesSub").textContent = `~${fmt(r.cycles_total / days * 30, 0)} mjesečno`;
+      const p = $("profit"); p.textContent = sign(r.profit_total); cls(p, r.profit_total);
+      $("profitSub").textContent = r.cycles_total ? `~${fmt(r.profit_total / r.cycles_total, 3)} po krugu` : q;
+    }
+    $("price").textContent = fmtP(snap.price);
+    if (g) {
+      $("held").textContent = `${fmt(g.held, 4)} ${base}`;
+      const u = $("unreal"); u.textContent = g.held ? `${sign(g.unreal)} ${q} trenutno` : "sve u " + q; cls(u, g.unreal);
+    } else { $("held").textContent = "–"; $("unreal").textContent = ""; }
+
+    const st = snap.settings, rows = [
+      ["Raspon", g ? `${fmtP(g.lower)} – ${fmtP(g.upper)}` : `±${st.range_pct}%`],
+      ["Razmak", g ? fmt(g.spacing) + "%" : "–"],
+      ["Razina", st.levels], ["Po nalogu", `${st.order_quote} ${q}`],
+      ["Auto pomicanje", st.auto_recenter ? "da" : "ne"], ["Pomaknut", g ? `${g.recenters}×` : "–"],
+      ["Provizija", fmt(snap.fee_rate * 100, 3) + "% / strana"], ["Grid od", g && g.started ? dt(t(g.started)) : "–"],
+    ];
+    $("settings").replaceChildren(...rows.map(([k,v]) => { const d = document.createElement("div"); const a = document.createElement("span"); a.className="muted"; a.textContent = k; const b = document.createElement("b"); b.textContent = v; d.append(a,b); return d; }));
+    $("pauseBtn").disabled = snap.paused; $("resumeBtn").disabled = !snap.paused && !!g;
+    renderLadder();
+  }
+
+  // ---------- ladder
+  function renderLadder() {
+    const g = snap && snap.grid, box = $("ladder");
+    if (!g) { box.innerHTML = '<div class="empty">Grid nije aktivan.</div>'; $("ladderInfo").textContent = ""; return; }
+    const bySide = {}; g.orders.forEach(o => bySide[o.level] = o);
+    const nb = g.orders.filter(o => o.side === "BUY").length, ns = g.orders.length - nb;
+    $("ladderInfo").textContent = `${nb} kupnji · ${ns} prodaja`;
+    const out = []; let priceShown = false;
+    const priceRow = () => { const d = document.createElement("div"); d.className = "lv price"; d.innerHTML = `<span>◀ trenutna cijena</span><b class="num"></b>`; d.querySelector("b").textContent = fmtP(snap.price); return d; };
+    for (let i = g.levels.length - 1; i >= 0; i--) {
+      const p = g.levels[i];
+      if (!priceShown && snap.price >= p) { out.push(priceRow()); priceShown = true; }
+      const o = bySide[i], row = document.createElement("div"); row.className = "lv";
+      const chip = o ? (o.side === "BUY" ? ["buy","KUPI " + fmt(o.qty * p, 1)] : ["sell","PRODAJ " + fmt(o.qty, 4)]) : ["none","—"];
+      row.innerHTML = `<span class="i num"></span><b class="num"></b><span class="d num"></span><span class="chip ${chip[0]}"></span>`;
+      row.children[0].textContent = i; row.children[1].textContent = fmtP(p);
+      row.children[2].textContent = `${sign(pct(p, snap.price),1)}%`; row.children[3].textContent = chip[1];
+      out.push(row);
+    }
+    if (!priceShown) out.push(priceRow());
+    box.replaceChildren(...out);
+  }
+
+  // ---------- trades
+  function renderTrades() {
+    const box = $("trades"), rows = (hist.trades || []).slice(-25).reverse();
+    if (!rows.length) { box.innerHTML = '<div class="empty">Još nema poteza. Prva kupnja dolazi kad cijena padne do zelene razine.</div>'; return; }
+    box.replaceChildren(...rows.map(r => {
+      const buy = r.strana === "BUY", d = document.createElement("div"); d.className = "tr";
+      d.innerHTML = `<div class="ic ${buy ? "b" : "s"}">${buy ? "▲" : "▼"}</div><div><div class="t1"></div><div class="t2"></div></div><div class="pl num"></div>`;
+      d.querySelector(".t1").textContent = `${buy ? "Kupio" : "Prodao"} ${fmt(+r.kolicina, 4)} @ ${fmtP(+r.cijena)}`;
+      d.querySelector(".t2").textContent = `${dt(t(r.vrijeme))} · ${fmt(+r.iznos)} ${snap ? snap.quote : ""}`;
+      const pl = d.querySelector(".pl");
+      if (r.zarada !== "" && r.zarada != null) { pl.textContent = sign(+r.zarada, 3); cls(pl, +r.zarada); } else { pl.textContent = "čeka prodaju"; pl.classList.add("muted"); pl.style.fontWeight = 500; pl.style.fontSize = "12px"; }
+      return d;
+    }));
+  }
+
+  // ---------- canvas utils
+  function setup(cv) {
+    const dpr = window.devicePixelRatio || 1, w = cv.clientWidth, h = cv.clientHeight;
+    if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }
+    const ctx = cv.getContext("2d"); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, w, h);
+    return {ctx, w, h};
+  }
+  function label(ctx, x, y, text, bg, fg) {
+    ctx.font = "600 11px -apple-system,Segoe UI,Roboto,sans-serif";
+    const w = ctx.measureText(text).width + 10;
+    ctx.fillStyle = bg; ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x, y - 9, w, 18, 5) : ctx.rect(x, y - 9, w, 18); ctx.fill();
+    ctx.fillStyle = fg; ctx.textBaseline = "middle"; ctx.fillText(text, x + 5, y);
+  }
+
+  // ---------- price chart
+  let chartGeo = null, hover = null;
+  function drawChart() {
+    const cv = $("chart"); const {ctx, w, h} = setup(cv);
+    if (!candles.length) { ctx.fillStyle = C.muted; ctx.font = "14px sans-serif"; ctx.textAlign = "center"; ctx.fillText("Učitavam graf…", w / 2, h / 2); ctx.textAlign = "left"; return; }
+    const L = 6, R = 66, T = 10, B = 22, pw = w - L - R, ph = h - T - B;
+    const g = snap && snap.grid, price = snap ? snap.price : candles[candles.length - 1].c;
+    let lo = Math.min(...candles.map(c => c.l)), hi = Math.max(...candles.map(c => c.h));
+    if (g) { // uvijek pokaži najbližu kupnju i prodaju
+      const buys = g.orders.filter(o => o.side === "BUY").map(o => o.price), sells = g.orders.filter(o => o.side === "SELL").map(o => o.price);
+      const nb = buys.length ? Math.max(...buys) : null, ns = sells.length ? Math.min(...sells) : null;
+      if (nb) lo = Math.min(lo, nb); if (ns) hi = Math.max(hi, ns);
+      if (!ns) { const above = g.levels.filter(p => p > price); if (above.length) hi = Math.max(hi, Math.min(...above)); }
+    }
+    const pad = (hi - lo) * 0.08 || hi * 0.01; lo -= pad; hi += pad;
+    const y = p => T + (hi - p) / (hi - lo) * ph;
+    const t0 = t(candles[0].t), step = candles.length > 1 ? t(candles[1].t) - t0 : 36e5, t1 = t(candles[candles.length - 1].t) + step;
+    const x = ms => L + (ms - t0) / (t1 - t0) * pw;
+    chartGeo = {L, R, T, B, pw, ph, lo, hi, t0, t1, w, h};
+
+    // pozadinska mreža
+    ctx.strokeStyle = C.grid; ctx.lineWidth = 1; ctx.fillStyle = C.muted; ctx.font = "11px -apple-system,Segoe UI,sans-serif"; ctx.textBaseline = "middle";
+    for (let i = 0; i <= 4; i++) { const p = lo + (hi - lo) * i / 4, yy = Math.round(y(p)) + .5; ctx.beginPath(); ctx.moveTo(L, yy); ctx.lineTo(L + pw, yy); ctx.stroke(); }
+    // raspon grida
+    if (g) {
+      const ya = Math.max(T, y(g.upper)), yb = Math.min(T + ph, y(g.lower));
+      if (yb > ya) { ctx.fillStyle = "rgba(76,141,255,0.05)"; ctx.fillRect(L, ya, pw, yb - ya); }
+      ctx.setLineDash([2, 4]); ctx.strokeStyle = "#2a3550";
+      g.levels.forEach(p => { if (p > lo && p < hi) { const yy = Math.round(y(p)) + .5; ctx.beginPath(); ctx.moveTo(L, yy); ctx.lineTo(L + pw, yy); ctx.stroke(); } });
+      ctx.setLineDash([]);
+    }
+    // svijeće
+    const cw = Math.max(1, pw / candles.length * 0.68);
+    candles.forEach(c => {
+      const cx = x(t(c.t)) + pw / candles.length / 2, up = c.c >= c.o, col = up ? C.green : C.red;
+      ctx.strokeStyle = col; ctx.fillStyle = col; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(Math.round(cx) + .5, y(c.h)); ctx.lineTo(Math.round(cx) + .5, y(c.l)); ctx.stroke();
+      const yo = y(c.o), yc = y(c.c); ctx.fillRect(cx - cw / 2, Math.min(yo, yc), cw, Math.max(1, Math.abs(yc - yo)));
+    });
+    // nalozi (oznake bez preklapanja; cijena ima prednost)
+    const used = price > lo && price < hi ? [y(price)] : [];
+    if (g) {
+      const near = [...g.orders].sort((a, b) => Math.abs(a.price - price) - Math.abs(b.price - price));
+      near.forEach(o => {
+        if (o.price <= lo || o.price >= hi) return;
+        const yy = Math.round(y(o.price)) + .5, col = o.side === "BUY" ? C.green : C.red;
+        ctx.strokeStyle = col; ctx.lineWidth = 1.2; ctx.setLineDash([6, 4]); ctx.beginPath(); ctx.moveTo(L, yy); ctx.lineTo(L + pw, yy); ctx.stroke(); ctx.setLineDash([]);
+        if (used.every(u => Math.abs(u - yy) >= 19)) { label(ctx, L + pw + 4, yy, fmtP(o.price), o.side === "BUY" ? "#0f3328" : "#3a1520", col); used.push(yy); }
+      });
+    }
+    // potezi
+    (hist.trades || []).forEach(r => {
+      const ms = t(r.vrijeme), p = +r.cijena; if (ms < t0 || ms > t1 || p <= lo || p >= hi) return;
+      const xx = x(ms), yy = y(p), buy = r.strana === "BUY";
+      ctx.fillStyle = buy ? C.green : C.red; ctx.strokeStyle = "#0b0f17"; ctx.lineWidth = 2; ctx.beginPath();
+      if (buy) { ctx.moveTo(xx, yy + 2); ctx.lineTo(xx - 7, yy + 13); ctx.lineTo(xx + 7, yy + 13); }
+      else { ctx.moveTo(xx, yy - 2); ctx.lineTo(xx - 7, yy - 13); ctx.lineTo(xx + 7, yy - 13); }
+      ctx.closePath(); ctx.stroke(); ctx.fill();
+    });
+    // trenutna cijena
+    if (price > lo && price < hi) {
+      const yy = Math.round(y(price)) + .5;
+      ctx.strokeStyle = C.yellow; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(L, yy); ctx.lineTo(L + pw, yy); ctx.stroke();
+      label(ctx, L + pw + 4, yy, fmtP(price), C.yellow, "#111");
+    }
+    // vremenske oznake
+    ctx.fillStyle = C.muted; ctx.font = "11px -apple-system,Segoe UI,sans-serif"; ctx.textBaseline = "alphabetic"; ctx.textAlign = "center";
+    for (let i = 1; i <= 4; i++) {
+      const ms = t0 + (t1 - t0) * i / 5, d = new Date(ms);
+      const txt = tf === "24h" ? d.toLocaleTimeString("hr-HR", {hour:"2-digit", minute:"2-digit"}) : d.toLocaleDateString("hr-HR", {day:"2-digit", month:"2-digit"});
+      ctx.fillText(txt, x(ms), h - 6);
+    }
+    ctx.textAlign = "left";
+    // križić (dodir / miš)
+    if (hover && hover.x >= L && hover.x <= L + pw) {
+      const p = hi - (hover.y - T) / ph * (hi - lo);
+      ctx.strokeStyle = "#5b6880"; ctx.setLineDash([3, 3]); ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(hover.x, T); ctx.lineTo(hover.x, T + ph); ctx.moveTo(L, hover.y); ctx.lineTo(L + pw, hover.y); ctx.stroke(); ctx.setLineDash([]);
+      label(ctx, L + pw + 4, hover.y, fmtP(p), "#26324a", C.text);
+    }
+  }
+  function onHover(e) {
+    const cv = $("chart"), rect = cv.getBoundingClientRect(), pt = e.touches ? e.touches[0] : e;
+    hover = {x: pt.clientX - rect.left, y: Math.min(Math.max(pt.clientY - rect.top, 10), cv.clientHeight - 22)};
+    drawChart();
+    if (!chartGeo || !candles.length) return;
+    const ms = chartGeo.t0 + (hover.x - chartGeo.L) / chartGeo.pw * (chartGeo.t1 - chartGeo.t0);
+    let c = candles[0]; for (const k of candles) if (t(k.t) <= ms) c = k;
+    const tip = $("tip"); tip.style.display = "block";
+    tip.textContent = `${dt(t(c.t))}  O ${fmtP(c.o)}  H ${fmtP(c.h)}  L ${fmtP(c.l)}  C ${fmtP(c.c)}`;
+    const tx = Math.min(pt.clientX + 12, window.innerWidth - tip.offsetWidth - 8); tip.style.left = tx + "px"; tip.style.top = (pt.clientY - 44) + "px";
+  }
+  function offHover() { hover = null; $("tip").style.display = "none"; drawChart(); }
+  ["mousemove","touchstart","touchmove"].forEach(ev => $("chart").addEventListener(ev, onHover, {passive:true}));
+  ["mouseleave","touchend","touchcancel"].forEach(ev => $("chart").addEventListener(ev, offHover));
+
+  // ---------- equity chart
+  function drawEquity() {
+    const cv = $("eq"); const {ctx, w, h} = setup(cv);
+    const r = snap && snap.report;
+    const pts = (hist.daily || []).map(d => ({t: t(d.datum), v: +d.vrijednost, p: +d.cijena}));
+    if (snap && snap.value != null) pts.push({t: Date.now(), v: snap.value, p: snap.price});
+    if (pts.length < 2 || !r) { ctx.fillStyle = C.muted; ctx.font = "14px sans-serif"; ctx.textAlign = "center"; ctx.fillText("Graf se puni – svaki dan nova točka.", w / 2, h / 2); ctx.textAlign = "left"; return; }
+    const hold = pts.map(o => ({t: o.t, v: r.start_value * o.p / r.start_price}));
+    const all = pts.map(o => o.v).concat(hold.map(o => o.v), [r.start_value]);
+    let lo = Math.min(...all), hi = Math.max(...all); const pad = (hi - lo) * 0.15 || 1; lo -= pad; hi += pad;
+    const L = 6, R = 56, T = 8, B = 20, pw = w - L - R, ph = h - T - B, t0 = pts[0].t, t1 = pts[pts.length - 1].t || t0 + 1;
+    const x = ms => L + (ms - t0) / Math.max(t1 - t0, 1) * pw, y = v => T + (hi - v) / (hi - lo) * ph;
+    ctx.strokeStyle = C.grid; ctx.lineWidth = 1; ctx.setLineDash([2, 4]);
+    const ys = Math.round(y(r.start_value)) + .5; ctx.beginPath(); ctx.moveTo(L, ys); ctx.lineTo(L + pw, ys); ctx.stroke(); ctx.setLineDash([]);
+    label(ctx, L + pw + 4, ys, fmt(r.start_value, 0), "#1a2233", C.muted);
+    const line = (arr, col, dash) => { ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.setLineDash(dash || []); ctx.beginPath(); arr.forEach((o, i) => i ? ctx.lineTo(x(o.t), y(o.v)) : ctx.moveTo(x(o.t), y(o.v))); ctx.stroke(); ctx.setLineDash([]); };
+    // površina ispod grid linije
+    const grad = ctx.createLinearGradient(0, T, 0, T + ph); grad.addColorStop(0, "rgba(240,185,11,.25)"); grad.addColorStop(1, "rgba(240,185,11,0)");
+    ctx.fillStyle = grad; ctx.beginPath(); pts.forEach((o, i) => i ? ctx.lineTo(x(o.t), y(o.v)) : ctx.moveTo(x(o.t), y(o.v))); ctx.lineTo(x(pts[pts.length-1].t), T + ph); ctx.lineTo(x(pts[0].t), T + ph); ctx.closePath(); ctx.fill();
+    line(hold, C.blue, [5, 4]); line(pts, C.yellow);
+    const last = pts[pts.length - 1]; label(ctx, L + pw + 4, y(last.v), fmt(last.v, 1), C.yellow, "#111");
+    ctx.fillStyle = C.muted; ctx.font = "11px sans-serif"; ctx.textAlign = "left"; ctx.fillText(new Date(t0).toLocaleDateString("hr-HR", {day:"2-digit", month:"2-digit"}), L, h - 5);
+    ctx.textAlign = "right"; ctx.fillText("danas", L + pw, h - 5); ctx.textAlign = "left";
+  }
+
+  // ---------- data loading
+  async function loadState() { try { snap = await api("/api/state"); renderState(); drawChart(); drawEquity(); } catch (e) {} }
+  async function loadCandles() { try { candles = await api("/api/candles?tf=" + tf); drawChart(); } catch (e) {} }
+  async function loadHistory() { try { hist = await api("/api/history"); renderTrades(); drawChart(); drawEquity(); } catch (e) {} }
+  function refreshAll() { loadState(); loadCandles(); loadHistory(); }
+
+  document.querySelectorAll("#tfTabs button").forEach(b => {
+    b.classList.toggle("on", b.dataset.tf === tf);
+    b.addEventListener("click", () => { tf = b.dataset.tf; store.set("tf", tf); document.querySelectorAll("#tfTabs button").forEach(x => x.classList.toggle("on", x === b)); candles = []; drawChart(); loadCandles(); });
+  });
+  async function command(cmd, text) {
+    if (!confirm(text)) return;
+    try { await api("/api/command", {method:"POST", body: JSON.stringify({cmd})}); setTimeout(loadState, 1500); setTimeout(loadState, 35000); }
+    catch (e) { if (e.message !== "401") alert("Komanda nije poslana."); }
+  }
+  $("pauseBtn").addEventListener("click", () => command("pauza", "Pauzirati bota? Neće postavljati nove kupnje."));
+  $("resumeBtn").addEventListener("click", () => command("nastavi", "Nastaviti s trgovanjem?"));
+  window.addEventListener("resize", () => { drawChart(); drawEquity(); });
+  document.addEventListener("visibilitychange", () => { if (!document.hidden && pin) refreshAll(); });
+
+  if (!pin) showLogin(); else refreshAll();
+  setInterval(() => { if (pin && !document.hidden) loadState(); }, 15000);
+  setInterval(() => { if (pin && !document.hidden) { loadCandles(); loadHistory(); } }, 60000);
+  setInterval(() => { if (snap) $("updated").textContent = "osvježeno " + ago(t(snap.updated)); }, 5000);
+})();
+</script>
+</body>
+</html>

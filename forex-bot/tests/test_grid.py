@@ -347,3 +347,20 @@ def test_network_blip_not_reported(tmp_path):
     ex.open_orders = real
     bot.tick()
     assert not any("Binanceom" in m for m in bot.tg.sent)
+
+
+def test_snapshot_and_trade_log_and_queue(tmp_path):
+    ex = FakeEx()
+    bot = make_grid(tmp_path, ex)
+    bot.tick()
+    assert bot.snapshot["grid"]["orders"] and bot.snapshot["price"] > 0
+    lv = bot.g["levels"]
+    ex.fill("BUY", lambda p: p == pytest.approx(lv[3]))
+    bot.tick()
+    ex.fill("SELL", lambda p: True)
+    bot.tick()
+    rows = (tmp_path / "trades.csv").read_text(encoding="utf-8").strip().splitlines()
+    assert len(rows) == 3 and ",BUY," in rows[1] and ",SELL," in rows[2]
+    bot.commands.put("/pauza")
+    bot.tick()
+    assert bot.state.paused and bot.snapshot["paused"]

@@ -46,6 +46,17 @@ Kad cijena naraste iznad raspona, sve je prodano sa zaradom, i za novi raspon po
 - Prije starta pokreni backtest (`backtest.bat`). Pokazat će koliko bi krugova bilo u zadnjih godinu dana i usporedbu sa "samo kupi i drži".
 - U EU se USDT ne može kupovati (MiCA pravila). Koristi **USDC** ili **EUR** parove. Ako imaš USDT, zamijeni ga u USDC preko *Binance Convert*.
 
+## 📱 Web aplikacija (grid bot)
+Kad se grid bot pokrene, pokreće i malu web aplikaciju na računalu i šalje na
+Telegram adresu i PIN, npr. `http://192.168.1.10:8080`.
+- Otvori adresu na mobitelu (**na kućnom WiFi-ju**), upiši PIN i dodaj stranicu na početni zaslon.
+- **Prikazuje:** vrijednost računa, krugove, zaradu, usporedbu sa "samo kupi i drži",
+  svijeće s Binancea (24 h / 7 dana / 30 dana) s razinama grida, nalozima koji čekaju i
+  oznakama kupnji i prodaja, "ljestve" grida, graf vrijednosti kroz vrijeme i zadnje poteze.
+- **Gumbi** Pauza i Nastavi. Zatvaranje svega namjerno ide samo preko Telegrama.
+- Windows će pri prvom pokretanju pitati za vatrozid: dopusti pristup za **privatne mreže**.
+- Isključuje se s `DASHBOARD_PORT=0`.
+
 ## Signalni bot: kako radi
 
 | | |

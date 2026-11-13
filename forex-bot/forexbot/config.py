@@ -102,6 +102,8 @@ class Config:
     grid_auto_recenter: bool = True
     report_weekday: int = 6  # 0=pon ... 6=ned
     report_hour_utc: int = 19  # 19 UTC = 20h zimi / 21h ljeti u Hrvatskoj
+    dashboard_port: int = 0  # 0 = web aplikacija isključena
+    dashboard_pin: str = ""
 
     @property
     def granularity_seconds(self) -> int:
@@ -147,6 +149,8 @@ class Config:
             grid_auto_recenter=_bool("GRID_AUTO_RECENTER", True),
             report_weekday=_int("REPORT_WEEKDAY", 6),
             report_hour_utc=_int("REPORT_HOUR_UTC", 19),
+            dashboard_port=_int("DASHBOARD_PORT", 8080),
+            dashboard_pin=_get("DASHBOARD_PIN"),
             oanda_token=_get("OANDA_TOKEN"),
             oanda_account_id=_get("OANDA_ACCOUNT_ID"),
             oanda_env=_get("OANDA_ENV", "practice").lower(),

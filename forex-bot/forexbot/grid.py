@@ -15,7 +15,9 @@ Rizik: ako cijena padne ispod raspona i ostane dolje, držiš kupljeno u minusu.
 
 from __future__ import annotations
 
+import csv
 import logging
+import queue
 import time
 
 import requests
@@ -214,6 +216,8 @@ class GridBot:
         self._last_error = ""
         self._conn_error = ""
         self._fail_count = 0
+        self.commands: "queue.Queue[str]" = queue.Queue()  # komande iz web aplikacije
+        self.snapshot: Dict[str, Any] = {}  # zadnje stanje za web aplikaciju
 
     @property
     def g(self) -> Dict[str, Any]:
@@ -225,6 +229,16 @@ class GridBot:
         if self.cfg.dry_run:
             mode += ", DRY RUN"
         self.tg.send(f"🤖 Grid bot pokrenut ({mode}) za {self.symbol}.\n\n{GRID_HELP}")
+        self._update_snapshot()
+        if self.cfg.dashboard_port:
+            from .dashboard import start_dashboard
+
+            try:
+                url, pin = start_dashboard(self, self.cfg.dashboard_port)
+                self.tg.send(f"📱 Aplikacija: {url}\nPIN: {pin}\n(radi na kućnom WiFi-ju; otvori na mobitelu i dodaj na početni zaslon)")
+            except OSError as exc:
+                log.error("Aplikacija se nije pokrenula: %s", exc)
+                self.tg.send(f"⚠️ Aplikacija se nije pokrenula ({exc}). Bot radi normalno.")
         while self._running:
             self.tick()
             time.sleep(self.cfg.poll_seconds)
@@ -240,6 +254,51 @@ class GridBot:
             log.exception("Neočekivana greška u petlji")
         else:
             self._connection_ok()
+        self._update_snapshot()
+
+    def _update_snapshot(self) -> None:
+        """Kopija stanja za web aplikaciju (čita je drugi thread, zato nova dict svaki put)."""
+        snap: Dict[str, Any] = {
+            "symbol": self.symbol, "base": self.base, "quote": self.quote,
+            "updated": self.now().isoformat(), "paused": self.state.paused,
+            "conn_error": bool(self._conn_error), "live": not self.cfg.binance_testnet,
+            "dry_run": self.cfg.dry_run, "fee_rate": self.cfg.fee_rate,
+            "settings": {
+                "range_pct": self.cfg.grid_range_pct, "levels": self.cfg.grid_levels,
+                "order_quote": self.cfg.grid_order_quote, "auto_recenter": self.cfg.grid_auto_recenter,
+            },
+            "price": self.snapshot.get("price"), "value": self.snapshot.get("value"),
+        }
+        try:
+            price = self.client.book(self.symbol)["bid"]
+            snap["price"] = price
+            snap["value"] = self._account_value(price)
+        except (BinanceError, KeyError) as exc:
+            log.debug("Snapshot bez svježe cijene: %s", exc)
+        price = snap["price"] or 0.0
+        if self.g:
+            held, unreal = self._held(price) if price else (0.0, 0.0)
+            snap["grid"] = {
+                "lower": self.g["lower"], "upper": self.g["upper"], "n": self.g["n"],
+                "levels": list(self.g["levels"]), "order_quote": self.g["order_quote"],
+                "spacing": spacing_pct(self.g["lower"], self.g["upper"], self.g["n"]),
+                "orders": [
+                    {"side": r["side"], "level": r["level"], "price": self.g["levels"][r["level"]], "qty": r["qty"]}
+                    for r in self.g["orders"].values()
+                ],
+                "pending": len(self.g.get("pending", [])), "profit": self.g.get("profit", 0.0),
+                "cycles": self.g.get("cycles", 0), "recenters": self.g.get("recenters", 0),
+                "started": self.g.get("started"), "last_error": self.g.get("last_error", ""),
+                "held": held, "unreal": unreal,
+            }
+        else:
+            snap["grid"] = None
+        r = self.state.report
+        if r:
+            snap["report"] = {k: r[k] for k in ("start", "start_value", "start_price", "cycles_total", "profit_total")}
+        else:
+            snap["report"] = None
+        self.snapshot = snap
 
     def stop(self) -> None:
         self._running = False
@@ -272,8 +331,16 @@ class GridBot:
             self._conn_error = ""
             self.tg.send("✅ Veza s Binanceom ponovno radi. Nastavljam.")
 
+    def _pending_commands(self) -> List[str]:
+        cmds = list(self.tg.poll_commands())
+        while True:
+            try:
+                cmds.append(self.commands.get_nowait())
+            except queue.Empty:
+                return cmds
+
     def handle_commands(self) -> None:
-        for cmd in self.tg.poll_commands():
+        for cmd in self._pending_commands():
             if cmd in ("/status", "/start"):
                 self.tg.send(self.status_text())
             elif cmd == "/pauza":
@@ -550,6 +617,7 @@ class GridBot:
             self.g["dust"] = self.g.get("dust", 0.0) + max(0.0, net - sell_qty)
             cost = quote_amount * (sell_qty / net) if net > 0 else quote_amount
             sell_lvl = lvl + 1
+            self._log_trade("BUY", lvl, executed, quote_amount, None)
             self._place("SELL", sell_lvl, sell_qty, cost)
             self.tg.send(
                 f"🟢 KUPIO {executed:g} {self.base} @ {levels[lvl]:.6g} ({quote_amount:.2f} {self.quote})\n"
@@ -564,6 +632,7 @@ class GridBot:
             if self.state.report:
                 self.state.report["cycles_total"] += 1
                 self.state.report["profit_total"] += pl
+            self._log_trade("SELL", lvl, executed, quote_amount, pl)
             msg = (
                 f"💰 PRODAO {executed:g} {self.base} @ {levels[lvl]:.6g}\n"
                 f"Zarada ovog kruga: {pl:+.3f} {self.quote} (nakon provizija)\n"
@@ -572,9 +641,27 @@ class GridBot:
             if not self.state.paused:
                 buy_lvl = lvl - 1
                 oq = self.g["order_quote"]
-                self._place("BUY", buy_lvl, oq / levels[buy_lvl], oq)
+                self._place("BUY", buy_lvl, ceil_to_step(oq / levels[buy_lvl], self.info["step"]), oq)
                 msg += f"\nPonovno čekam kupnju @ {levels[buy_lvl]:.6g}."
             self.tg.send(msg)
+
+    def _log_trade(self, side: str, level: int, qty: float, quote_amount: float, pl: Optional[float]) -> None:
+        """Zapis svake kupnje/prodaje u data/trades.csv (za aplikaciju i analizu)."""
+        path = self.cfg.data_dir / "trades.csv"
+        try:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            new = not path.exists()
+            with open(path, "a", newline="", encoding="utf-8") as fh:
+                w = csv.writer(fh)
+                if new:
+                    w.writerow(["vrijeme", "par", "strana", "razina", "cijena", "kolicina", "iznos", "zarada"])
+                price = quote_amount / qty if qty else self.g["levels"][level]
+                w.writerow([
+                    self.now().isoformat(), self.symbol, side, level, round(price, 8), qty,
+                    round(quote_amount, 6), "" if pl is None else round(pl, 6),
+                ])
+        except OSError as exc:
+            log.warning("Ne mogu zapisati trades.csv: %s", exc)
 
     def _retry_pending(self) -> None:
         pending, self.g["pending"] = self.g.get("pending", []), []
