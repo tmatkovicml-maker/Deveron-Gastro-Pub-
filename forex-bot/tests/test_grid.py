@@ -364,3 +364,41 @@ def test_snapshot_and_trade_log_and_queue(tmp_path):
     bot.commands.put("/pauza")
     bot.tick()
     assert bot.state.paused and bot.snapshot["paused"]
+
+
+def test_sell_two_levels_up_and_rebuy_at_buy_level(tmp_path):
+    ex = FakeEx()
+    bot = make_grid(tmp_path, ex, grid_sell_levels=2)
+    bot.check_once()
+    lv = bot.g["levels"]
+    ex.fill("BUY", lambda p: p == pytest.approx(lv[3]))
+    bot.check_once()
+    sells = [o for o in ex.orders.values() if o["side"] == "SELL" and o["status"] == "NEW"]
+    assert len(sells) == 1 and sells[0]["price"] == pytest.approx(lv[5])
+    ex.fill("SELL", lambda p: True)
+    ex.price = lv[5]
+    bot.check_once()
+    assert bot.g["cycles"] == 1
+    rebuy = [o for o in ex.orders.values() if o["side"] == "BUY" and o["status"] == "NEW" and o["price"] == pytest.approx(lv[3])]
+    assert len(rebuy) == 1
+    assert bot.g["profit"] > 0.15  # ~2 razmaka zarade
+
+
+def test_sell_level_capped_at_top(tmp_path):
+    ex = FakeEx()
+    bot = make_grid(tmp_path, ex, grid_sell_levels=5)
+    bot.check_once()
+    lv = bot.g["levels"]
+    top_buy = max(r["level"] for r in bot.g["orders"].values())
+    ex.fill("BUY", lambda p: p == pytest.approx(lv[top_buy]))
+    bot.check_once()
+    sell = [o for o in ex.orders.values() if o["side"] == "SELL"][0]
+    assert sell["price"] == pytest.approx(lv[min(top_buy + 5, 8)])
+
+
+def test_simulation_sell_levels_tradeoff():
+    closes = [100, 97, 100, 97, 100, 97, 100] * 20  # malo skakanje
+    candles = make_candles(closes, wiggle=0.0)
+    one = simulate_grid(candles, 90, 110, 10, 6, 0.001, 50, sell_levels=1)
+    three = simulate_grid(candles, 90, 110, 10, 6, 0.001, 50, sell_levels=3)
+    assert one.cycles > three.cycles  # dalja prodaja = manje krugova kad cijena samo skače

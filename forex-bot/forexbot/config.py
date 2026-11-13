@@ -100,6 +100,7 @@ class Config:
     grid_levels: int = 8
     grid_order_quote: float = 6.0
     grid_auto_recenter: bool = True
+    grid_sell_levels: int = 1  # prodaja N razina iznad kupnje
     report_weekday: int = 6  # 0=pon ... 6=ned
     report_hour_utc: int = 19  # 19 UTC = 20h zimi / 21h ljeti u Hrvatskoj
     dashboard_port: int = 0  # 0 = web aplikacija isključena
@@ -147,6 +148,7 @@ class Config:
             grid_levels=_int("GRID_LEVELS", 8),
             grid_order_quote=_float("GRID_ORDER_QUOTE", 6.0),
             grid_auto_recenter=_bool("GRID_AUTO_RECENTER", True),
+            grid_sell_levels=_int("GRID_SELL_LEVELS", 1),
             report_weekday=_int("REPORT_WEEKDAY", 6),
             report_hour_utc=_int("REPORT_HOUR_UTC", 19),
             dashboard_port=_int("DASHBOARD_PORT", 8080),
@@ -212,6 +214,8 @@ class Config:
                     raise ConfigError("GRID_LEVELS mora biti između 2 i 50")
                 if (self.grid_lower > 0) != (self.grid_upper > 0) or (self.grid_lower and self.grid_lower >= self.grid_upper):
                     raise ConfigError("Postavi oba GRID_LOWER i GRID_UPPER (donja < gornja) ili nijedan")
+                if not 1 <= self.grid_sell_levels <= 5:
+                    raise ConfigError("GRID_SELL_LEVELS mora biti između 1 i 5")
                 if not 1 <= self.grid_range_pct <= 50:
                     raise ConfigError("GRID_RANGE_PCT mora biti između 1 i 50")
                 if self.grid_order_quote <= 0:

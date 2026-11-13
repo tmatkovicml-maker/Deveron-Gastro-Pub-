@@ -115,14 +115,16 @@ def simulate_grid(
     start_quote: float,
     symbol: str = "",
     recenter_pct: Optional[float] = None,
+    sell_levels: int = 1,
 ) -> GridSimResult:
     """recenter_pct: ako je zadan, raspon se pomiče prema gore (±recenter_pct oko cijene)
-    kad cijena izađe iznad raspona, a nema kupljenog coina - isto kao live bot."""
+    kad cijena izađe iznad raspona, a nema kupljenog coina - isto kao live bot.
+    sell_levels: koliko razina iznad kupnje se prodaje (1 = susjedna razina)."""
     levels = grid_levels(lower, upper, n)
     price0 = candles[0].open
     cash = start_quote
     buys: set = set()
-    sells: Dict[int, Tuple[float, float]] = {}  # razina -> (količina, trošak)
+    sells: List[Tuple[int, float, float, int]] = []  # (razina prodaje, količina, trošak, razina kupnje)
     cycles = 0
     profit = 0.0
     in_range = 0
@@ -149,26 +151,28 @@ def simulate_grid(
             continue
         if lower <= c.close <= upper:
             in_range += 1
-        new_sells: Dict[int, Tuple[float, float]] = {}
+        new_sells: List[Tuple[int, float, float, int]] = []
         for i in sorted(buys, reverse=True):
             if c.low <= levels[i]:
                 buys.discard(i)
                 qty = order_quote / levels[i] * (1 - fee_rate)
-                new_sells[i + 1] = (qty, order_quote)
-        for j in sorted(sells):
+                new_sells.append((min(i + sell_levels, n), qty, order_quote, i))
+        still: List[Tuple[int, float, float, int]] = []
+        for j, qty, cost, bi in sells:
             if c.high >= levels[j]:
-                qty, cost = sells.pop(j)
                 proceeds = qty * levels[j] * (1 - fee_rate)
                 profit += proceeds - cost
                 cash += proceeds
                 cycles += 1
-                if cash >= order_quote:
+                if cash >= order_quote and bi not in buys:
                     cash -= order_quote
-                    buys.add(j - 1)
-        sells.update(new_sells)
+                    buys.add(bi)
+            else:
+                still.append((j, qty, cost, bi))
+        sells = still + new_sells
 
     last = candles[-1].close
-    held = sum(q for q, _ in sells.values())
+    held = sum(q for _, q, _, _ in sells)
     end_value = cash + len(buys) * order_quote + held * last
     hold_value = start_quote / price0 * (1 - fee_rate) * last
     days = len(candles) and _days_between(candles[0].time, candles[-1].time)
@@ -424,7 +428,7 @@ class GridBot:
             )
         self.tg.send(msg)
 
-    def _place(self, side: str, level: int, qty: float, cost: float) -> bool:
+    def _place(self, side: str, level: int, qty: float, cost: float, buy_level: Optional[int] = None) -> bool:
         price = self.g["levels"][level]
         qty = floor_to_step(qty, self.info["step"])
         if qty < self.info["min_qty"] or qty * price < self.info["min_notional"]:
@@ -442,11 +446,16 @@ class GridBot:
                 oid = str(self.client.limit_order(self.symbol, side, qty, price)["orderId"])
             except BinanceError as exc:
                 log.error("Nalog %s @ %s nije uspio: %s", side, price, exc)
-                self.g["pending"].append({"side": side, "level": level, "qty": qty, "cost": cost})
+                p = {"side": side, "level": level, "qty": qty, "cost": cost}
+                if buy_level is not None:
+                    p["buy_level"] = buy_level
+                self.g["pending"].append(p)
                 self._last_error = str(exc)
                 self._notify_error()
                 return False
         self.g["orders"][oid] = {"side": side, "level": level, "qty": qty, "cost": cost}
+        if buy_level is not None:
+            self.g["orders"][oid]["buy_level"] = buy_level
         log.info("Postavljen %s %s %s @ %s", side, qty, self.base, price)
         self.g["last_error"] = ""
         return True
@@ -616,13 +625,13 @@ class GridBot:
             # ostatak manji od koraka ("prašina") ostaje u novčaniku i prodaje se na kraju
             self.g["dust"] = self.g.get("dust", 0.0) + max(0.0, net - sell_qty)
             cost = quote_amount * (sell_qty / net) if net > 0 else quote_amount
-            sell_lvl = lvl + 1
+            sell_lvl = min(lvl + self.cfg.grid_sell_levels, self.g["n"])
             self._log_trade("BUY", lvl, executed, quote_amount, None)
-            self._place("SELL", sell_lvl, sell_qty, cost)
+            self._place("SELL", sell_lvl, sell_qty, cost, buy_level=lvl)
             self.tg.send(
                 f"🟢 KUPIO {executed:g} {self.base} @ {levels[lvl]:.6g} ({quote_amount:.2f} {self.quote})\n"
                 f"Cijena je pala do razine {lvl}. Postavio sam prodaju @ {levels[sell_lvl]:.6g} "
-                f"(+{spacing_pct(self.g['lower'], self.g['upper'], self.g['n']):.2f}%)."
+                f"(+{(levels[sell_lvl] / levels[lvl] - 1) * 100:.2f}%)."
             )
         else:
             proceeds = quote_amount * (1 - self.cfg.fee_rate)
@@ -639,7 +648,7 @@ class GridBot:
                 f"Ukupno: {self.g['profit']:+.2f} {self.quote} u {self.g['cycles']} krugova."
             )
             if not self.state.paused:
-                buy_lvl = lvl - 1
+                buy_lvl = rec.get("buy_level", lvl - 1)
                 oq = self.g["order_quote"]
                 self._place("BUY", buy_lvl, ceil_to_step(oq / levels[buy_lvl], self.info["step"]), oq)
                 msg += f"\nPonovno čekam kupnju @ {levels[buy_lvl]:.6g}."
@@ -670,7 +679,7 @@ class GridBot:
             if p["side"] == "BUY" and self.state.paused:
                 self.g["pending"].append(p)
                 continue
-            if self._place(p["side"], p["level"], p["qty"], p["cost"]):
+            if self._place(p["side"], p["level"], p["qty"], p["cost"], p.get("buy_level")):
                 ok += 1
         if ok:
             self.tg.send(f"✅ Postavljeno {ok} naloga koji ranije nisu uspjeli.")

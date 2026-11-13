@@ -173,9 +173,11 @@ def cmd_backtest_grid(cfg: Config, args: argparse.Namespace) -> int:
     recenter = cfg.grid_range_pct if cfg.grid_auto_recenter and not manual else None
     res = simulate_grid(
         candles, lower, upper, cfg.grid_levels, cfg.grid_order_quote, cfg.fee_rate, args.balance, sym,
-        recenter_pct=recenter,
+        recenter_pct=recenter, sell_levels=cfg.grid_sell_levels,
     )
     print(res.summary())
+    k = cfg.grid_sell_levels
+    print(f"Prodaja: {k} {'razina' if k == 1 or k >= 5 else 'razine'} iznad kupnje")
     return 0
 
 
