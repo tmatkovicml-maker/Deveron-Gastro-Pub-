@@ -21,6 +21,7 @@ import json
 import logging
 import secrets
 import socket
+import subprocess
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -37,6 +38,8 @@ STATIC = Path(__file__).parent / "static"
 # vremenski okvir -> (granularnost, broj svijeća)
 TIMEFRAMES = {"24h": ("M15", 96), "7d": ("H1", 168), "30d": ("H4", 180)}
 CANDLE_CACHE_SECONDS = 30
+MAX_FAILS = 10  # pogrešnih PIN-ova u LOCK_SECONDS -> zaključaj
+LOCK_SECONDS = 15 * 60
 ALLOWED_COMMANDS = {"pauza": "/pauza", "nastavi": "/nastavi"}
 
 ICON_SVG = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
@@ -50,8 +53,21 @@ ICON_SVG = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
 </svg>"""
 
 
+def tailscale_ip() -> str:
+    """Tailscale adresa (100.x.y.z) ako je Tailscale instaliran, inače prazno."""
+    try:
+        out = subprocess.run(["tailscale", "ip", "-4"], capture_output=True, text=True, timeout=5)
+    except (OSError, subprocess.SubprocessError):
+        return ""
+    lines = out.stdout.strip().splitlines()
+    return lines[0].strip() if out.returncode == 0 and lines else ""
+
+
 def lan_ip() -> str:
-    """IP adresa računala u kućnoj mreži (UDP 'connect' ne šalje ništa)."""
+    """Tailscale adresa, ili IP računala u kućnoj mreži (UDP 'connect' ne šalje ništa)."""
+    ts = tailscale_ip()
+    if ts:
+        return ts
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
         s.connect(("8.8.8.8", 80))
@@ -94,9 +110,28 @@ class Dashboard:
         self.public = public_client
         self._cache: Dict[str, Tuple[float, List[Dict[str, Any]]]] = {}
         self._lock = threading.Lock()
+        self._auth_lock = threading.Lock()
+        self._fails: List[float] = []
+        self.locked_until = 0.0
 
-    def check_pin(self, given: str) -> bool:
-        return bool(given) and hmac.compare_digest(given.encode(), self.pin.encode())
+    def check_pin(self, given: str) -> str:
+        """'ok', 'bad' ili 'locked'. Pogrešni pokušaji idu jedan po jedan (bez paralelnog pogađanja)."""
+        with self._auth_lock:
+            now = time.time()
+            if now < self.locked_until:
+                return "locked"
+            if given and hmac.compare_digest(given.encode(), self.pin.encode()):
+                return "ok"
+            self._fails = [t for t in self._fails if now - t < LOCK_SECONDS] + [now]
+            if len(self._fails) >= MAX_FAILS:
+                self.locked_until = now + LOCK_SECONDS
+                self._fails = []
+                log.warning("Previše pogrešnih PIN-ova - aplikacija zaključana na %d min", LOCK_SECONDS // 60)
+                notify = getattr(self.bot, "tg", None)
+                if notify is not None:
+                    notify.send("🔒 Netko je 10 puta upisao pogrešan PIN u aplikaciju. Zaključana je na 15 minuta.")
+            time.sleep(1.0)  # uspori pogađanje
+            return "bad"
 
     def candles(self, tf: str) -> List[Dict[str, Any]]:
         gran, limit = TIMEFRAMES.get(tf, TIMEFRAMES["24h"])
@@ -144,10 +179,14 @@ def make_handler(app: Dashboard):
             self._send(code, json.dumps(obj, ensure_ascii=False).encode("utf-8"), "application/json; charset=utf-8")
 
         def _authorized(self) -> bool:
-            if app.check_pin(self.headers.get("X-Pin", "")):
+            status = app.check_pin(self.headers.get("X-Pin", ""))
+            if status == "ok":
                 return True
-            time.sleep(1.0)  # uspori pogađanje PIN-a
-            self._json(401, {"error": "Pogrešan PIN"})
+            if status == "locked":
+                mins = max(1, int((app.locked_until - time.time()) / 60) + 1)
+                self._json(429, {"error": f"Previše pogrešnih pokušaja. Pokušaj za {mins} min."})
+            else:
+                self._json(401, {"error": "Pogrešan PIN"})
             return False
 
         def do_GET(self) -> None:  # noqa: N802

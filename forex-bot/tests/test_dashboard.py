@@ -93,3 +93,11 @@ def test_pin_generated_once(tmp_path):
     assert len(pin) == 6 and pin.isdigit()
     assert load_or_create_pin(tmp_path, "") == pin
     assert load_or_create_pin(tmp_path, "9999") == "9999"
+
+
+def test_lockout_after_many_wrong_pins(server):
+    bot, base = server
+    for _ in range(10):
+        assert req(base + "/api/state", pin="111111")[0] == 401
+    code, body = req(base + "/api/state", pin="424242")  # i ispravan PIN čeka
+    assert code == 429 and "Previše" in json.loads(body)["error"]

@@ -57,6 +57,15 @@ Telegram adresu i PIN, npr. `http://192.168.1.10:8080`.
 - Windows će pri prvom pokretanju pitati za vatrozid: dopusti pristup za **privatne mreže**.
 - Isključuje se s `DASHBOARD_PORT=0`.
 
+## ☁️ VPS (server 0-24 sa stalnom IP adresom)
+1. Otvori najmanji Ubuntu server (npr. Hetzner, ~4–5 €/mj., s **IPv4** adresom) i dodaj svoj SSH ključ.
+2. **Zaustavi bota na računalu** (nikad ne smiju raditi dva bota istovremeno), pa kopiraj mapu:
+   `scp -r "...\forex-bot" root@IP_SERVERA:/root/`
+3. Na serveru: `cd /root/forex-bot && bash deploy/install_vps.sh`, zatim `tailscale up`.
+4. IP servera (`curl -4 -s https://api.ipify.org`) upiši na Binanceu umjesto kućne adrese.
+5. `systemctl start forexbot`. Aplikacija radi preko **Tailscalea** (aplikacija na mobitelu,
+   ista prijava), a izvana je otvoren samo SSH.
+
 ## Signalni bot: kako radi
 
 | | |

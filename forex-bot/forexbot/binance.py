@@ -16,8 +16,13 @@ from typing import Any, Dict, List, Optional
 from urllib.parse import urlencode
 
 import requests
+import urllib3.util.connection as _urllib3_connection
 
 from .strategy import Candle
+
+# Binance API ključ je vezan za IPv4 adresu, pa uvijek idemo preko IPv4
+# (inače bi server s IPv6 mogao poslati zahtjev s adrese koja nije na popisu).
+_urllib3_connection.HAS_IPV6 = False
 
 log = logging.getLogger(__name__)
 
