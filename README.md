@@ -40,7 +40,7 @@ Početno je učitano 48 termina: svaki dan blok **A 09:00–16:00 (7 h, 1 osoba)
 ## Puštanje na internet (Cloudflare Workers, besplatni plan)
 Isto kao aplikacije za apartmane i za Deveron: Cloudflare sam objavljuje aplikaciju iz GitHuba.
 
-1. Na dash.cloudflare.com: **Workers & Pages** → **Create** → **Import a repository** → odaberite ovaj repozitorij (grana `main`). Cloudflare čita `wrangler.toml` i napravi Worker **`advent-prijave`**.
+1. Na dash.cloudflare.com: **Workers & Pages** → **Create** → **Import a repository** → odaberite ovaj repozitorij i granu u koju je spojen ovaj kod. Cloudflare čita `wrangler.toml` i napravi Worker **`advent-prijave`**.
 2. **Settings → Variables and Secrets → Add** → vrsta **Secret**, naziv `ADMIN_PASSWORD`, vrijednost je vaša lozinka (dugačka, ne ista kao drugdje).
 3. Stranica radi na `https://advent-prijave.<vaš-račun>.workers.dev/`. HTTPS je uključen sam od sebe.
 4. *(Po želji)* Vlastita domena: **Settings → Domains & Routes → Add → Custom domain**, npr. `prijave.vasa-domena.hr`. Zatim dodajte varijablu `PUBLIC_URL` = `https://prijave.vasa-domena.hr/` (vrsta Text), da QR kod vodi na nju.
