@@ -1,0 +1,384 @@
+<!doctype html>
+<html lang="hr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Prijave · Organizator</title>
+<style>
+:root {
+  --bg: #f4f2ed; --card: #ffffff; --ink: #1d2420; --muted: #5d6862; --line: #e2ddd2;
+  --brand: #1C2140; --accent: #c2186f; --accent-soft: #fbe9e9; --ok: #1e6b3f; --ok-soft: #e4f3ea; --warn: #8a5a00; --warn-soft: #fff4d6;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #111613; --card: #1a211d; --ink: #eef1ee; --muted: #a3ada7; --line: #2d3631;
+    --brand: #1d5a40; --accent: #f0757b; --accent-soft: #3a1d1f; --ok: #6fcf97; --ok-soft: #1c3326; --warn: #f3c76b; --warn-soft: #3a2f14; }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+header { background: var(--brand); color: #fff; padding: 12px 16px; position: sticky; top: 0; z-index: 5; }
+header .wrap, main { max-width: 980px; margin: 0 auto; }
+header .wrap { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: space-between; }
+header h1 { margin: 0; font-size: 18px; }
+nav { display: flex; gap: 4px; }
+nav button { background: transparent; color: #fff; border: 1px solid rgba(255,255,255,.35); border-radius: 8px; padding: 7px 12px; font: inherit; cursor: pointer; }
+nav button[aria-current="true"] { background: #fff; color: var(--brand); font-weight: 600; }
+main { padding: 12px 16px 60px; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; margin: 10px 0; }
+.card h2 { margin: 0 0 8px; font-size: 17px; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; }
+.stat { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
+.stat b { display: block; font-size: 22px; }
+.stat span { color: var(--muted); font-size: 13px; }
+.openbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.pill { font-weight: 700; padding: 4px 10px; border-radius: 99px; }
+.pill.on { background: var(--ok-soft); color: var(--ok); } .pill.off { background: var(--accent-soft); color: var(--accent); }
+.btn { border: 1px solid var(--line); background: var(--card); color: var(--ink); font: inherit; padding: 8px 12px; border-radius: 8px; cursor: pointer; }
+.btn.primary { background: var(--brand); color: #fff; border-color: var(--brand); }
+.btn.danger { background: var(--accent); color: #fff; border-color: var(--accent); }
+.btn.small { padding: 4px 8px; font-size: 13px; }
+.day { background: var(--card); border: 1px solid var(--line); border-radius: 12px; margin: 10px 0; overflow: hidden; }
+.day > h3 { margin: 0; padding: 8px 12px; font-size: 15px; background: color-mix(in srgb, var(--brand) 10%, var(--card)); }
+.block { padding: 8px 12px; border-top: 1px solid var(--line); }
+.bhead { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.bhead .cnt { font-weight: 700; }
+.bhead .cnt.full { color: var(--ok); } .bhead .cnt.empty { color: var(--accent); }
+.bhead input[type=number] { width: 64px; font: inherit; padding: 3px 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--ink); }
+.regs { list-style: none; margin: 6px 0 0; padding: 0; }
+.regs li { display: flex; align-items: center; gap: 8px; padding: 5px 0; flex-wrap: wrap; border-bottom: 1px dashed var(--line); }
+.regs li:last-child { border-bottom: 0; }
+.regs .who { flex: 1; min-width: 160px; }
+.regs a { color: inherit; }
+.tag { font-size: 12px; font-weight: 600; padding: 1px 7px; border-radius: 99px; }
+.tag.pending { background: var(--warn-soft); color: var(--warn); } .tag.admin { background: var(--line); color: var(--muted); }
+.addform { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+.addform input { flex: 1; min-width: 140px; font: inherit; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--ink); }
+table { width: 100%; border-collapse: collapse; }
+th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+td.num, th.num { text-align: right; }
+tr.over td { background: var(--accent-soft); }
+.over-txt { color: var(--accent); font-weight: 700; }
+.scroll { overflow-x: auto; }
+label.f { display: block; font-weight: 600; margin: 10px 0 4px; }
+input[type=text], input[type=number], input[type=date], input[type=password], textarea { font: inherit; padding: 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--ink); width: 100%; }
+textarea { min-height: 110px; }
+.row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.note { color: var(--muted); font-size: 13px; }
+.err { background: var(--accent-soft); color: var(--accent); padding: 8px 10px; border-radius: 8px; white-space: pre-wrap; font-weight: 600; }
+.qr { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; }
+.qr img { width: 180px; height: 180px; background: #fff; border-radius: 8px; border: 1px solid var(--line); }
+#login { max-width: 360px; margin: 60px auto; }
+.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: 20px; background: var(--ink); color: var(--bg); padding: 10px 14px; border-radius: 10px; font-weight: 600; z-index: 9; max-width: 90vw; }
+.filters { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin: 8px 0; }
+[hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<form id="login" class="card" hidden>
+  <h2>Organizator</h2>
+  <label class="f" for="pw">Lozinka</label>
+  <input type="password" id="pw" autocomplete="current-password" required>
+  <div id="loginErr" class="err" hidden style="margin-top:8px"></div>
+  <p><button class="btn primary" type="submit">Prijava</button></p>
+</form>
+
+<div id="app" hidden>
+<header><div class="wrap">
+  <h1>Echoes of the Island · prijave smjena</h1>
+  <nav>
+    <button data-tab="slots" aria-current="true">Termini</button>
+    <button data-tab="people">Osobe</button>
+    <button data-tab="settings">Postavke</button>
+  </nav>
+</div></header>
+<main>
+  <div class="card openbar">
+    <div>Prijave su <span id="openPill" class="pill"></span></div>
+    <div class="row">
+      <button class="btn" id="exportBtn">⬇ Izvoz CSV (Excel)</button>
+      <button class="btn" id="toggleOpen"></button>
+    </div>
+  </div>
+  <div class="stats" id="stats"></div>
+
+  <section id="tab-slots">
+    <div class="filters">
+      <label><input type="checkbox" id="fFree"> samo termini s praznim mjestima</label>
+      <label><input type="checkbox" id="fPending"> samo s prijavama koje čekaju potvrdu</label>
+      <label><input type="checkbox" id="fPast"> prikaži prošle dane</label>
+    </div>
+    <div id="days"></div>
+  </section>
+
+  <section id="tab-people" hidden>
+    <div class="card">
+      <h2>Po osobi</h2>
+      <p class="note">Sati po ISO tjednu (50: 7.–13.12., 51: 14.–20.12., 52: 21.–27.12., 53: 28.12.–3.1.). Crveno je iznad <span id="maxw">30</span> h tjedno (moguće samo ako je organizator ručno dodao smjenu).</p>
+      <div class="scroll"><table id="people"></table></div>
+    </div>
+  </section>
+
+  <section id="tab-settings" hidden>
+    <form class="card" id="settingsForm">
+      <h2>Postavke</h2>
+      <label class="f" for="sCancel">Rok za otkazivanje (sati prije početka smjene)</label>
+      <input type="number" id="sCancel" min="0" max="720" step="1" style="max-width:120px">
+      <div class="note">0 = učenik može otkazati sve do početka smjene.</div>
+      <label class="f"><input type="checkbox" id="sManual"> Ručno potvrđujem svaku prijavu</label>
+      <div class="note">Prijava koja čeka potvrdu svejedno zauzima mjesto. Učenik stanje vidi na svojoj poveznici.</div>
+      <label class="f" for="sTerms">Satnica i uvjeti rada (prikazuje se učenicima samo ako je upisano)</label>
+      <textarea id="sTerms" maxlength="2000" placeholder="npr. Satnica: 6 € neto po satu. Isplata preko student servisa do 15.1.2027."></textarea>
+      <label class="f" for="sOrg">Organizator (za obavijest o privatnosti)</label>
+      <input type="text" id="sOrg" maxlength="400" placeholder="npr. Tvrtka d.o.o., Mali Lošinj, mob. 091 …">
+      <label class="f" for="sWipe">Automatsko brisanje imena i mobitela</label>
+      <input type="date" id="sWipe" style="max-width:200px">
+      <div class="note">Tog dana u 00:00 brišu se sve prijave i prijave se zatvaraju. Prije toga napravite izvoz.</div>
+      <p><button class="btn primary" type="submit">Spremi postavke</button></p>
+    </form>
+
+    <div class="card">
+      <h2>QR kod za letak</h2>
+      <div class="qr">
+        <img id="qrImg" alt="QR kod javne stranice">
+        <div>
+          <p>Vodi na: <b id="qrUrl"></b></p>
+          <p class="row"><a class="btn" href="/qr.png?scale=40" download="qr-prijave.png">⬇ PNG (≈1500 px)</a>
+          <a class="btn" href="/qr.png?scale=80" download="qr-prijave-veliki.png">⬇ PNG (≈3000 px)</a>
+          <a class="btn" href="/qr.svg" download="qr-prijave.svg">⬇ SVG</a></p>
+          <p class="note">Za tisak je najbolji SVG (vektorski). Prije tiska skenirajte QR kod mobitelom.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Termini iz CSV-a</h2>
+      <p class="note">Zamjenjuje termine onima iz datoteke (npr. Termini_prijave.csv). Stupci: Datum, Blok, Od, Do (ili Vrijeme), Sati, Mjesta.
+        Prijave ostaju. Termin koji ima prijave ne može se maknuti.</p>
+      <input type="file" id="csvFile" accept=".csv,text/csv,text/plain">
+      <div id="csvErr" class="err" hidden style="margin-top:8px"></div>
+    </div>
+
+    <div class="card">
+      <h2>Brisanje podataka</h2>
+      <p class="note">Briše sva imena, mobitele i prijave. Termini i postavke ostaju. Ne može se poništiti, pa prije toga napravite izvoz.</p>
+      <div class="row"><input type="text" id="wipeTxt" placeholder="upišite OBRIŠI" style="max-width:200px"><button class="btn danger" id="wipeBtn">Obriši sve prijave</button></div>
+    </div>
+    <p><button class="btn" id="logout">Odjava</button></p>
+  </section>
+</main>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+const DAYS = ['nedjelja', 'ponedjeljak', 'utorak', 'srijeda', 'četvrtak', 'petak', 'subota'];
+const dayLabel = d => { const x = new Date(d + 'T12:00:00Z'); return `${DAYS[x.getUTCDay()]} ${x.getUTCDate()}. ${x.getUTCMonth() + 1}. ${x.getUTCFullYear()}.`; };
+const shortDay = d => { const x = new Date(d + 'T12:00:00Z'); return `${x.getUTCDate()}.${x.getUTCMonth() + 1}.`; };
+const hrs = h => String(h).replace('.', ',') + ' h';
+const KEY = 'advent-admin-pw';
+let pw = '', data = null, tab = 'slots', toastT;
+try { pw = sessionStorage.getItem(KEY) || ''; } catch {}
+
+function toast(m) { const t = $('toast'); t.textContent = m; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 3500); }
+const ERR = {
+  full: 'Termin je popunjen.', one_per_day: 'Osoba već ima smjenu taj dan.', week_hours: 'Osoba bi prešla tjedni limit sati.',
+  already: 'Osoba je već na tom terminu.', name: 'Upišite ime i prezime.', phone: 'Neispravan broj mobitela.',
+  slots_in_use: 'Ovi termini imaju prijave pa ih CSV ne može maknuti:', invalid: 'Neispravan unos.', too_many: 'Previše pokušaja. Pričekajte 15 minuta.',
+  no_password: 'Lozinka ADMIN_PASSWORD nije postavljena u Cloudflareu.',
+};
+
+async function api(path, opts = {}) {
+  const r = await fetch('/api/admin/' + path, { ...opts, headers: { 'Content-Type': 'application/json', 'X-Admin-Password': pw } });
+  if (r.status === 401) { showLogin('Pogrešna lozinka.'); throw new Error('auth'); }
+  const j = await r.json().catch(() => ({ error: 'network' }));
+  if (j.error) throw Object.assign(new Error(j.message || ERR[j.error] || j.error), j);
+  return j;
+}
+async function run(p) {
+  try { const d = await p; if (d && d.slots) { data = d; render(); } return d; }
+  catch (e) { if (e.message !== 'auth') toast(e.message); throw e; }
+}
+
+function showLogin(msg) {
+  $('app').hidden = true; $('login').hidden = false;
+  $('loginErr').hidden = !msg; $('loginErr').textContent = msg || '';
+  $('pw').focus();
+}
+$('login').onsubmit = async e => {
+  e.preventDefault();
+  pw = $('pw').value;
+  try { data = await api('data'); } catch (err) { if (err.message !== 'auth') { $('loginErr').hidden = false; $('loginErr').textContent = err.message; } return; }
+  try { sessionStorage.setItem(KEY, pw); } catch {}
+  $('login').hidden = true; $('app').hidden = false; render();
+};
+$('logout').onclick = () => { try { sessionStorage.removeItem(KEY); } catch {} pw = ''; showLogin(); };
+
+document.querySelectorAll('nav button').forEach(b => b.onclick = () => {
+  tab = b.dataset.tab;
+  document.querySelectorAll('nav button').forEach(x => x.setAttribute('aria-current', x === b));
+  for (const t of ['slots', 'people', 'settings']) $('tab-' + t).hidden = t !== tab;
+});
+
+function render() {
+  const st = data.settings;
+  $('openPill').textContent = st.open ? 'OTVORENE' : 'ZATVORENE';
+  $('openPill').className = 'pill ' + (st.open ? 'on' : 'off');
+  $('toggleOpen').textContent = st.open ? 'Zatvori prijave' : 'Otvori prijave';
+  $('toggleOpen').className = 'btn ' + (st.open ? 'danger' : 'primary');
+  $('maxw').textContent = data.max_week;
+
+  const cap = data.slots.reduce((n, s) => n + s.capacity, 0), taken = data.slots.reduce((n, s) => n + Math.min(s.taken, s.capacity), 0);
+  const emptySlots = data.slots.filter(s => s.taken < s.capacity).length, pending = data.regs.filter(r => r.status === 'pending').length;
+  $('stats').innerHTML = [
+    [`${taken} / ${cap}`, 'popunjenih mjesta'], [emptySlots, 'termina s praznim mjestima'],
+    [data.people.length, 'osoba'], [pending, 'čeka potvrdu'],
+    [data.people.filter(p => p.over).length, 'iznad tjednog limita'],
+  ].map(([b, s]) => `<div class="stat"><b>${b}</b><span>${s}</span></div>`).join('');
+
+  renderDays(); renderPeople(); renderSettings();
+}
+
+function renderDays() {
+  const fFree = $('fFree').checked, fPending = $('fPending').checked, fPast = $('fPast').checked;
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Zagreb' });
+  const regsBy = {};
+  for (const r of data.regs) (regsBy[r.slot_id] ||= []).push(r);
+  const days = {};
+  for (const s of data.slots) (days[s.day] ||= []).push(s);
+  let html = '';
+  for (const [day, slots] of Object.entries(days)) {
+    if (!fPast && day < today) continue;
+    const shown = slots.filter(s => (!fFree || s.taken < s.capacity) && (!fPending || (regsBy[s.id] || []).some(r => r.status === 'pending')));
+    if (!shown.length) continue;
+    html += `<div class="day"><h3>${dayLabel(day)}</h3>`;
+    for (const s of shown) {
+      const regs = regsBy[s.id] || [];
+      const cls = s.taken >= s.capacity ? 'full' : s.taken === 0 ? 'empty' : '';
+      html += `<div class="block" data-slot="${s.id}"><div class="bhead">
+        <b>Blok ${s.block}</b><span>${s.start}–${s.end} · ${hrs(s.hours)}</span>
+        <span class="cnt ${cls}">${s.taken} / ${s.capacity}</span>
+        <label class="note">mjesta <input type="number" min="0" max="50" value="${s.capacity}" data-cap="${s.id}"></label>
+        <button class="btn small" data-add="${s.id}">+ Dodaj</button></div>
+        <ul class="regs">${regs.map(r => `<li><span class="who"><b>${esc(r.name)}</b> · <a href="tel:${esc(r.phone)}">${esc(r.phone_fmt)}</a>
+          ${r.status === 'pending' ? '<span class="tag pending">čeka potvrdu</span>' : ''}${r.source === 'admin' ? '<span class="tag admin">dodao organizator</span>' : ''}</span>
+          ${r.status === 'pending' ? `<button class="btn small primary" data-confirm="${r.id}">Potvrdi</button>` : ''}
+          <button class="btn small" data-link="${esc(r.token)}" title="Kopiraj privatnu poveznicu osobe">🔗</button>
+          <button class="btn small" data-del="${r.id}" title="Ukloni">✕</button></li>`).join('')}</ul>
+        <form class="addform" data-addform="${s.id}" hidden>
+          <input name="name" placeholder="Ime i prezime" required><input name="phone" type="tel" placeholder="Mobitel" required>
+          <button class="btn small primary">Spremi</button></form></div>`;
+    }
+    html += '</div>';
+  }
+  $('days').innerHTML = html || '<p class="note">Nema termina za prikaz.</p>';
+}
+['fFree', 'fPending', 'fPast'].forEach(id => $(id).onchange = renderDays);
+
+$('days').addEventListener('click', async e => {
+  const t = e.target.closest('button'); if (!t) return;
+  if (t.dataset.add) { e.preventDefault(); const f = document.querySelector(`[data-addform="${t.dataset.add}"]`); f.hidden = !f.hidden; if (!f.hidden) f.name.focus(); }
+  if (t.dataset.del) {
+    const r = data.regs.find(x => x.id === +t.dataset.del);
+    if (confirm(`Ukloniti ${r.name} s termina?`)) await run(api('regs/' + r.id, { method: 'DELETE' })).catch(() => {});
+  }
+  if (t.dataset.confirm) await run(api(`regs/${t.dataset.confirm}/confirm`, { method: 'POST' })).catch(() => {});
+  if (t.dataset.link) {
+    const link = `${location.origin}/moji/${t.dataset.link}`;
+    try { await navigator.clipboard.writeText(link); toast('Poveznica je kopirana. Možete je poslati osobi.'); } catch { prompt('Poveznica osobe:', link); }
+  }
+});
+$('days').addEventListener('submit', async e => {
+  e.preventDefault();
+  const f = e.target, slot = f.dataset.addform;
+  const payload = { slot, name: f.name.value, phone: f.phone.value };
+  try { data = await api('regs', { method: 'POST', body: JSON.stringify(payload) }); render(); toast('Dodano.'); }
+  catch (err) {
+    if (!['full', 'one_per_day', 'week_hours'].includes(err.error)) return toast(err.message);
+    if (confirm(`${err.message}${err.hours ? ` (${hrs(err.hours)})` : ''}\n\nIpak dodati?`)) {
+      await run(api('regs', { method: 'POST', body: JSON.stringify({ ...payload, force: true }) })).catch(() => {});
+    }
+  }
+});
+$('days').addEventListener('change', async e => {
+  const id = e.target.dataset.cap; if (!id) return;
+  await run(api('slots/' + id, { method: 'POST', body: JSON.stringify({ capacity: +e.target.value }) })).then(() => toast('Broj mjesta je spremljen.')).catch(() => {});
+});
+
+function renderPeople() {
+  const weeks = [...new Set(data.slots.map(s => isoWeek(s.day)))].sort();
+  $('people').innerHTML = `<tr><th>Ime i prezime</th><th>Mobitel</th>${weeks.map(w => `<th class="num">T${w.slice(-2)}</th>`).join('')}<th class="num">Ukupno</th><th>Smjene</th></tr>`
+    + data.people.map(p => `<tr class="${p.over ? 'over' : ''}"><td><b>${esc(p.name)}</b>${p.over ? ' <span class="over-txt">⚠ iznad limita</span>' : ''}</td>
+      <td><a href="tel:${esc(p.phone)}">${esc(p.phone_fmt)}</a></td>
+      ${weeks.map(w => { const h = p.weeks[w] || 0; return `<td class="num${h > data.max_week ? ' over-txt' : ''}">${h ? hrs(h) : '–'}</td>`; }).join('')}
+      <td class="num"><b>${hrs(p.total)}</b></td>
+      <td>${p.shifts.sort((a, b) => a.id.localeCompare(b.id)).map(s => shortDay(s.day) + s.id.slice(-1)).join(', ')}</td></tr>`).join('')
+    + (data.people.length ? '' : '<tr><td colspan="9" class="note">Još nema prijava.</td></tr>');
+}
+function isoWeek(day) {
+  const d = new Date(day + 'T12:00:00Z');
+  d.setUTCDate(d.getUTCDate() - (d.getUTCDay() + 6) % 7 + 3);
+  const y = d.getUTCFullYear();
+  return `${y}-W${String(1 + Math.floor((d - Date.UTC(y, 0, 1)) / 864e5 / 7)).padStart(2, '0')}`;
+}
+
+let settingsShown = false;
+function renderSettings() {
+  const st = data.settings;
+  if (!settingsShown) {   // don't overwrite what the organizer is typing
+    $('sCancel').value = st.cancel_hours; $('sManual').checked = st.manual; $('sTerms').value = st.terms;
+    $('sOrg').value = st.organizer; $('sWipe').value = st.wipe_on; settingsShown = true;
+  }
+  $('qrUrl').textContent = location.origin + '/';
+  if (!$('qrImg').src) $('qrImg').src = '/qr.svg';
+}
+$('settingsForm').onsubmit = async e => {
+  e.preventDefault();
+  await run(api('settings', { method: 'POST', body: JSON.stringify({
+    cancel_hours: +$('sCancel').value, manual: $('sManual').checked, terms: $('sTerms').value,
+    organizer: $('sOrg').value, wipe_on: $('sWipe').value }) })).then(() => toast('Postavke su spremljene.')).catch(() => {});
+};
+$('toggleOpen').onclick = () => run(api('settings', { method: 'POST', body: JSON.stringify({ open: !data.settings.open }) })).catch(() => {});
+
+$('csvFile').onchange = async () => {
+  const f = $('csvFile').files[0]; if (!f) return;
+  $('csvErr').hidden = true;
+  let txt = await f.text();
+  if (txt.includes('�')) txt = new TextDecoder('windows-1250').decode(await f.arrayBuffer());   // Excel "CSV" in Croatian Windows encoding
+  try {
+    data = await api('import', { method: 'POST', body: JSON.stringify({ csv: txt }) });
+    render(); toast(`Učitano ${data.slots.length} termina.`);
+  } catch (err) {
+    $('csvErr').hidden = false;
+    $('csvErr').textContent = err.error === 'slots_in_use' ? `${ERR.slots_in_use}\n${err.slots.join(', ')}` : err.message;
+  }
+  $('csvFile').value = '';
+};
+
+$('exportBtn').onclick = async () => {
+  const r = await fetch('/api/admin/export.csv', { headers: { 'X-Admin-Password': pw } });
+  if (!r.ok) return toast('Izvoz nije uspio.');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(await r.blob());
+  a.download = `prijave-advent-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+};
+
+$('wipeBtn').onclick = async () => {
+  if ($('wipeTxt').value.trim() !== 'OBRIŠI') return toast('Upišite OBRIŠI za potvrdu.');
+  if (!confirm('Sigurno obrisati sve prijave, imena i mobitele?')) return;
+  await run(api('wipe', { method: 'POST', body: JSON.stringify({ confirm: 'OBRIŠI' }) })).then(() => { $('wipeTxt').value = ''; toast('Sve prijave su obrisane.'); }).catch(() => {});
+};
+
+// refresh every 30 s while the page is open (new sign-ups come in)
+setInterval(async () => {
+  if (document.activeElement && document.activeElement.closest('#days form, #days input, #tab-settings')) return;   // don't disturb typing
+  if (pw && !document.hidden && !$('app').hidden) { try { data = await api('data'); render(); } catch {} } }, 30000);
+
+(async () => {
+  if (!pw) return showLogin();
+  try { data = await api('data'); $('app').hidden = false; render(); } catch (e) { if (e.message !== 'auth') showLogin(e.message); }
+})();
+</script>
+</body>
+</html>

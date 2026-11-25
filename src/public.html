@@ -1,0 +1,441 @@
+<!doctype html>
+<html lang="hr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Prijava smjena · Echoes of the Island</title>
+<meta name="description" content="Prijava za rad u adventskoj kućici Echoes of the Island na Trgu Republike Hrvatske, Mali Lošinj, 10.12.2026.–2.1.2027.">
+<meta name="theme-color" content="#0C0F1D">
+<link rel="icon" href="/logo.svg" type="image/svg+xml">
+<style>
+@font-face { font-family: 'Barlow'; font-weight: 400; font-display: swap; src: url(/fonts/barlow-latin-400-normal.woff2) format('woff2'); unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+@font-face { font-family: 'Barlow'; font-weight: 400; font-display: swap; src: url(/fonts/barlow-latin-ext-400-normal.woff2) format('woff2'); unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
+@font-face { font-family: 'Barlow'; font-weight: 600; font-display: swap; src: url(/fonts/barlow-latin-600-normal.woff2) format('woff2'); unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+@font-face { font-family: 'Barlow'; font-weight: 600; font-display: swap; src: url(/fonts/barlow-latin-ext-600-normal.woff2) format('woff2'); unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
+@font-face { font-family: 'Barlow Condensed'; font-weight: 600; font-display: swap; src: url(/fonts/barlow-condensed-latin-600-normal.woff2) format('woff2'); unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+@font-face { font-family: 'Barlow Condensed'; font-weight: 600; font-display: swap; src: url(/fonts/barlow-condensed-latin-ext-600-normal.woff2) format('woff2'); unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
+@font-face { font-family: 'Barlow Condensed'; font-weight: 800; font-display: swap; src: url(/fonts/barlow-condensed-latin-800-normal.woff2) format('woff2'); unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+@font-face { font-family: 'Barlow Condensed'; font-weight: 800; font-display: swap; src: url(/fonts/barlow-condensed-latin-ext-800-normal.woff2) format('woff2'); unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
+/* Echoes of the Island: night navy, neon pink, warm lights (same as the hut's design) */
+:root {
+  color-scheme: dark;
+  --bg: #0C0F1D; --card: #171B2E; --card2: #1C2140; --ink: #F3EEF0; --muted: #A9ABC0; --line: #2A2F4A;
+  --brand: #0C0F1D; --brand-ink: #F3EEF0; --accent: #FF2A96; --accent-ink: #0C0F1D; --accent-soft: #3a1630;
+  --sel: #FF2A96; --sel-soft: #2a1530; --warn: #FFE3A8; --warn-soft: #3a2e1a; --ok: #FFE3A8; --ok-soft: #2e2a1c;
+  --off: #13162a; --off-ink: #6a6e88; --lamp: #FFE3A8;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 17px/1.45 Barlow, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+h1, h2, h3, .cond { font-family: "Barlow Condensed", Barlow, system-ui, sans-serif; }
+header { background: var(--brand); color: var(--brand-ink); padding: 18px 16px 0; text-align: center; border-bottom: 1px solid var(--line); }
+header .logo { width: 104px; height: 104px; display: block; margin: 0 auto 4px; }
+.lights { display: flex; justify-content: center; gap: 22px; margin: 18px 0 -5px; }
+.lights i { width: 9px; height: 9px; border-radius: 50%; background: var(--lamp); box-shadow: 0 0 10px var(--lamp); }
+.lights i:nth-child(even) { background: var(--accent); box-shadow: 0 0 10px var(--accent); }
+header .wrap { max-width: 640px; margin: 0 auto; }
+header .kicker { font: 800 15px/1.2 'Barlow Condensed', sans-serif; letter-spacing: .3em; text-transform: uppercase; color: var(--accent); }
+header h1 { margin: 6px 0 6px; font-size: 36px; font-weight: 800; letter-spacing: .04em; line-height: 1.05; text-transform: uppercase; }
+header p { margin: 0; color: var(--muted); font-size: 16px; }
+main { max-width: 640px; margin: 0 auto; padding: 0 16px 120px; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; margin: 14px 0; }
+.card h2 { margin: 0 0 8px; font-size: 22px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--accent); }
+.rules { margin: 0; padding-left: 20px; }
+.rules li { margin: 3px 0; }
+.terms { white-space: pre-wrap; }
+.banner { border-radius: 12px; padding: 12px 14px; margin: 14px 0; font-weight: 600; }
+.banner.closed { background: var(--accent-soft); color: #FF8CC6; }
+.banner.info { background: var(--warn-soft); color: var(--warn); }
+.mylinks a { color: inherit; font-weight: 600; }
+.week { margin: 22px 0 8px; display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.week h3 { margin: 0; font-size: 21px; font-weight: 800; letter-spacing: .03em; text-transform: uppercase; }
+.week .hrs { font-size: 14px; color: var(--muted); white-space: nowrap; }
+.week .hrs.full { color: var(--accent); font-weight: 600; }
+.day { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; margin: 8px 0; }
+.day .date { font-weight: 700; margin-bottom: 8px; display: flex; gap: 8px; align-items: baseline; }
+.day .date small { color: var(--muted); font-weight: 400; }
+.slots { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.slot { text-align: left; border: 2px solid var(--line); background: var(--card); color: var(--ink); border-radius: 12px; padding: 9px 10px;
+  font: inherit; cursor: pointer; min-height: 72px; touch-action: manipulation; }
+.slot b { display: block; font: 800 19px/1.1 'Barlow Condensed', sans-serif; letter-spacing: .04em; text-transform: uppercase; }
+.slot .t { font-size: 14px; color: var(--muted); }
+.slot .free { font-size: 13px; font-weight: 600; color: var(--ok); margin-top: 2px; }
+.slot[aria-pressed="true"] { border-color: var(--sel); background: var(--sel-soft); box-shadow: 0 0 14px rgba(255, 42, 150, .45); }
+.slot[aria-pressed="true"] b::after { content: " ✓"; color: var(--sel); }
+.slot:disabled { background: var(--off); color: var(--off-ink); border-color: var(--off); cursor: not-allowed; }
+.slot:disabled .t, .slot:disabled .free { color: var(--off-ink); }
+.slot.isfull .free { color: var(--accent); }
+.slot:focus-visible, .btn:focus-visible, input:focus-visible { outline: 3px solid var(--lamp); outline-offset: 2px; }
+.bar { position: fixed; left: 0; right: 0; bottom: 0; background: var(--card2); border-top: 1px solid var(--line);
+  padding: 10px 16px calc(10px + env(safe-area-inset-bottom)); box-shadow: 0 -6px 20px rgba(0,0,0,.45); }
+.bar .wrap { max-width: 640px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.bar .sum { font-size: 15px; }
+.btn { border: 0; background: var(--accent); color: var(--accent-ink); font: 800 19px/1 'Barlow Condensed', system-ui, sans-serif; letter-spacing: .06em; text-transform: uppercase; padding: 14px 18px; border-radius: 12px; cursor: pointer; }
+.btn.secondary { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+label.f { display: block; margin: 12px 0 4px; font-weight: 600; }
+input[type=text], input[type=tel] { width: 100%; font: inherit; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); color: var(--ink); }
+.check { display: flex; gap: 10px; align-items: flex-start; margin: 12px 0; }
+.check input { width: 22px; height: 22px; margin: 1px 0 0; flex: none; accent-color: var(--brand); }
+.hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+.note { font-size: 14px; color: var(--muted); }
+.err { background: var(--accent-soft); color: #FF8CC6; border-radius: 10px; padding: 10px 12px; margin: 12px 0; font-weight: 600; }
+.chosen { margin: 6px 0 0; padding: 0; list-style: none; }
+.chosen li { display: flex; justify-content: space-between; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.chosen li:last-child { border-bottom: 0; }
+.status { font-size: 13px; font-weight: 600; padding: 2px 8px; border-radius: 99px; white-space: nowrap; }
+.status.ok { background: var(--ok-soft); color: var(--ok); }
+.status.pending { background: var(--warn-soft); color: var(--warn); }
+.link { display: flex; gap: 8px; margin: 10px 0; }
+.link input { flex: 1; min-width: 0; font-size: 14px; }
+.toast { font-weight: 600; position: fixed; left: 16px; right: 16px; bottom: calc(86px + env(safe-area-inset-bottom)); max-width: 560px; margin: 0 auto;
+  background: var(--ink); color: var(--bg); padding: 12px 14px; border-radius: 12px; font-weight: 600; z-index: 9; }
+details summary { cursor: pointer; font-weight: 600; }
+[hidden] { display: none !important; }
+.loading { text-align: center; color: var(--muted); padding: 40px 0; }
+</style>
+</head>
+<body>
+<header><div class="wrap">
+  <img class="logo" src="/logo.svg" alt="Echoes of the Island">
+  <div class="kicker">Advent na Lošinju</div>
+  <h1>Prijava za rad u kućici</h1>
+  <p>10. 12. 2026. – 2. 1. 2027. · Trg RH, Mali Lošinj</p>
+  <div class="lights" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+</div></header>
+
+<main>
+  <div id="loading" class="loading">Učitavanje…</div>
+
+  <!-- ===== choose shifts ===== -->
+  <section id="choose" hidden>
+    <div id="mylinks" class="banner info mylinks" hidden></div>
+    <div id="closed" class="banner closed" hidden>Prijave su trenutno zatvorene.</div>
+    <div class="card">
+      <h2>Kako funkcionira</h2>
+      <ul class="rules">
+        <li>Samo za osobe s navršenih <b>18 godina</b>.</li>
+        <li>Svaki dan ima dva bloka: <b>A</b> (prijepodne) i <b>B</b> (večer).</li>
+        <li>Najviše <b>jedan blok dnevno</b> i najviše <b id="maxw">30</b> <b>sati tjedno</b>.</li>
+        <li>Termin se zatvara čim je popunjen, pa vrijedi onaj tko se prvi prijavi.</li>
+        <li id="cancelrule"></li>
+      </ul>
+    </div>
+    <div class="card" id="termsCard" hidden>
+      <h2>Satnica i uvjeti</h2>
+      <div class="terms" id="terms"></div>
+    </div>
+    <div id="weeks"></div>
+
+    <!-- form -->
+    <form id="form" class="card" hidden novalidate>
+      <h2>Tvoji podaci</h2>
+      <ul class="chosen" id="formChosen"></ul>
+      <label class="f" for="name">Ime i prezime</label>
+      <input type="text" id="name" name="name" autocomplete="name" maxlength="80" required>
+      <label class="f" for="phone">Broj mobitela</label>
+      <input type="tel" id="phone" name="phone" autocomplete="tel" inputmode="tel" placeholder="091 234 5678" maxlength="20" required>
+      <div class="note">Organizator te na taj broj zove ili šalje poruku u vezi smjena.</div>
+      <div class="hp" aria-hidden="true"><label>Web stranica <input type="text" name="website" id="website" tabindex="-1" autocomplete="off"></label></div>
+      <label class="check"><input type="checkbox" id="adult"><span>Imam navršenih <b>18 godina</b>.</span></label>
+      <label class="check"><input type="checkbox" id="consent"><span>Pristajem da se moje ime, broj mobitela i odabrani termini koriste za raspored rada.</span></label>
+      <details class="note">
+        <summary>Obavijest o privatnosti</summary>
+        <p><span id="orgline">Podatke prikuplja organizator adventske kućice.</span>
+        Prikupljamo samo ime i prezime, broj mobitela i termine koje odabereš. Koristimo ih samo za raspored rada i kontakt u vezi smjena.
+        Podatke ne dajemo trećim stranama. Vide ih samo organizator i ti, preko svoje privatne poveznice.
+        Brišu se automatski <b id="wipeon">nakon sezone</b>. Brisanje ili ispravak možeš zatražiti od organizatora i ranije.</p>
+      </details>
+      <div id="formErr" class="err" hidden></div>
+      <button class="btn" id="send" type="submit" style="width:100%;margin-top:6px">Pošalji prijavu</button>
+    </form>
+  </section>
+
+  <!-- ===== my shifts (after signing up, and on /moji/<token>) ===== -->
+  <section id="mine" hidden>
+    <div class="card">
+      <h2 id="mineTitle">Tvoji termini</h2>
+      <p id="mineIntro" class="note"></p>
+      <ul class="chosen" id="mineList"></ul>
+      <div id="mineErr" class="err" hidden></div>
+    </div>
+    <div class="card" id="linkCard">
+      <h2>Tvoja privatna poveznica</h2>
+      <p class="note">Spremi je. Preko nje uvijek možeš vidjeti svoje termine i otkazati ih. Ne šalji je drugima.</p>
+      <div class="link"><input type="text" id="mylink" readonly aria-label="Privatna poveznica"><button class="btn secondary" type="button" id="copy">Kopiraj</button></div>
+    </div>
+    <p><a href="/" id="more" class="btn secondary" style="display:inline-block;text-decoration:none">Prijavi još termina</a></p>
+  </section>
+</main>
+
+<div class="bar" id="bar" hidden><div class="wrap">
+  <div class="sum" id="sum">Odaberi termine</div>
+  <button class="btn" id="next" type="button" disabled>Dalje</button>
+</div></div>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<script>
+const $ = id => document.getElementById(id);
+const DAYS = ['ned', 'pon', 'uto', 'sri', 'čet', 'pet', 'sub'];
+const MONTHS = ['siječnja', 'veljače', 'ožujka', 'travnja', 'svibnja', 'lipnja', 'srpnja', 'kolovoza', 'rujna', 'listopada', 'studenoga', 'prosinca'];
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+const dayLabel = d => { const x = new Date(d + 'T12:00:00Z'); return `${DAYS[x.getUTCDay()]} ${x.getUTCDate()}. ${x.getUTCMonth() + 1}.`; };
+const hrDate = d => { const x = new Date(d + 'T12:00:00Z'); return `${x.getUTCDate()}. ${x.getUTCMonth() + 1}. ${x.getUTCFullYear()}.`; };
+const hrs = h => String(h).replace('.', ',') + ' h';
+const startMs = s => Date.parse(`${s.day}T${s.start}:00+01:00`);
+function isoWeek(day) {
+  const d = new Date(day + 'T12:00:00Z');
+  d.setUTCDate(d.getUTCDate() - (d.getUTCDay() + 6) % 7 + 3);
+  return 1 + Math.floor((d - Date.UTC(d.getUTCFullYear(), 0, 1)) / 864e5 / 7);
+}
+const freeText = n => n % 10 === 1 && n % 100 !== 11 ? `${n} slobodno mjesto`
+  : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? `${n} slobodna mjesta` : `${n} slobodnih mjesta`;
+const slotLabel = s => `${dayLabel(s.day)} blok ${s.block} (${s.start}–${s.end})`;
+const LS = 'advent-prijave-linkovi';
+const loadLinks = () => { try { return JSON.parse(localStorage.getItem(LS)) || []; } catch { return []; } };
+const saveLink = t => { try { const l = loadLinks().filter(x => x !== t); l.unshift(t); localStorage.setItem(LS, JSON.stringify(l.slice(0, 5))); } catch {} };
+
+let state = null, selected = new Set(), clockSkew = 0, toastTimer;
+const byId = id => state.slots.find(s => s.id === id);
+const now = () => Date.now() + clockSkew;
+
+function toast(msg) {
+  const t = $('toast'); t.textContent = msg; t.hidden = false;
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.hidden = true, 4500);
+}
+
+function errorText(r) {
+  const s = r.slot && state && byId(r.slot);
+  switch (r.error) {
+    case 'closed': return 'Prijave su trenutno zatvorene.';
+    case 'full': return s ? `Termin ${slotLabel(s)} je upravo popunjen. Odaberi neki drugi.` : 'Jedan od termina je upravo popunjen.';
+    case 'past': return s ? `Termin ${slotLabel(s)} je već počeo.` : 'Jedan od termina je već počeo.';
+    case 'one_per_day': return `Na dan ${hrDate(r.day)} već imaš prijavljen termin. Dopušten je jedan blok dnevno.`;
+    case 'week_hours': return `S ovim terminima imao/la bi ${hrs(r.hours)} u ${+r.week.slice(-2)}. tjednu. Najviše je ${state ? state.max_week : 30} h tjedno.`;
+    case 'name': return 'Upiši ime i prezime.';
+    case 'phone': return 'Upiši ispravan broj mobitela, npr. 091 234 5678.';
+    case 'adult': return 'Prijava je moguća samo s navršenih 18 godina.';
+    case 'consent': return 'Za prijavu je potreban pristanak na obradu podataka.';
+    case 'no_slots': return 'Odaberi barem jedan termin.';
+    case 'too_many': return 'Previše pokušaja. Pričekaj nekoliko minuta pa pokušaj ponovno.';
+    case 'too_late': return 'Rok za otkazivanje ovog termina je prošao. Javi se organizatoru.';
+    case 'unknown_slot': return 'Termini su promijenjeni. Osvježi stranicu.';
+    case 'not_found': return 'Poveznica nije ispravna ili su termini otkazani.';
+    default: return 'Nešto nije u redu. Provjeri internetsku vezu i pokušaj ponovno.';
+  }
+}
+
+async function api(path, opts = {}) {
+  const r = await fetch(path, { ...opts, headers: { 'Content-Type': 'application/json' } });
+  let data = {};
+  try { data = await r.json(); } catch {}
+  if (!r.ok && !data.error) data.error = 'network';
+  return data;
+}
+
+// ---------- choosing ----------
+function weekHoursSel(week) {
+  let h = 0;
+  for (const id of selected) { const s = byId(id); if (s && isoWeek(s.day) === week) h += s.hours; }
+  return Math.round(h * 10) / 10;
+}
+
+function render() {
+  const open = state.open;
+  $('closed').hidden = open;
+  $('maxw').textContent = state.max_week;
+  $('cancelrule').innerHTML = state.cancel_hours > 0
+    ? `Termin možeš otkazati najkasnije <b>${state.cancel_hours} h</b> prije početka.`
+    : 'Termin možeš otkazati sve do njegova početka.';
+  if (state.manual) $('cancelrule').innerHTML += ' Organizator potvrđuje svaku prijavu.';
+  $('termsCard').hidden = !state.terms;
+  $('terms').textContent = state.terms || '';
+  $('orgline').textContent = state.organizer ? `Podatke prikuplja ${state.organizer}.` : 'Podatke prikuplja organizator adventske kućice.';
+  $('wipeon').textContent = state.wipe_on ? hrDate(state.wipe_on) : 'nakon sezone';
+
+  // drop choices that are no longer possible (someone else took the last place meanwhile)
+  for (const id of [...selected]) {
+    const s = byId(id);
+    if (!s || s.free <= 0 || startMs(s) <= now()) { selected.delete(id); if (s) toast(`Termin ${slotLabel(s)} je u međuvremenu popunjen.`); }
+  }
+
+  const weeks = new Map();
+  for (const s of state.slots) {
+    const w = isoWeek(s.day);
+    if (!weeks.has(w)) weeks.set(w, new Map());
+    const days = weeks.get(w);
+    if (!days.has(s.day)) days.set(s.day, []);
+    days.get(s.day).push(s);
+  }
+  let html = '';
+  for (const [w, days] of weeks) {
+    const list = [...days.keys()];
+    const a = new Date(list[0] + 'T12:00:00Z'), b = new Date(list[list.length - 1] + 'T12:00:00Z');
+    const range = a.getUTCMonth() === b.getUTCMonth()
+      ? `${a.getUTCDate()}.–${b.getUTCDate()}. ${MONTHS[a.getUTCMonth()]}`
+      : `${a.getUTCDate()}. ${MONTHS[a.getUTCMonth()]} – ${b.getUTCDate()}. ${MONTHS[b.getUTCMonth()]}`;
+    const h = weekHoursSel(w);
+    html += `<div class="week"><h3>${w}. tjedan · ${range}</h3><span class="hrs${h >= state.max_week ? ' full' : ''}" data-week="${w}">${hrs(h)} / ${state.max_week} h</span></div>`;
+    for (const [day, slots] of days) {
+      const long = slots.some(s => s.block === 'B' && s.end !== '00:00' && s.end < s.start);
+      html += `<div class="day"><div class="date">${dayLabel(day)}${long ? '<small>duža večernja smjena</small>' : ''}</div><div class="slots">`;
+      for (const s of slots.sort((x, y) => x.block.localeCompare(y.block))) {
+        const past = startMs(s) <= now(), full = s.free <= 0, sel = selected.has(s.id);
+        const dis = !open || past || (full && !sel);
+        const free = past ? 'Završeno' : full ? 'Popunjeno' : freeText(s.free);
+        html += `<button type="button" class="slot${full ? ' isfull' : ''}" data-id="${s.id}" aria-pressed="${sel}" ${dis ? 'disabled' : ''}>
+          <b>Blok ${s.block}</b><span class="t">${s.start}–${s.end} · ${hrs(s.hours)}</span><div class="free">${free}</div></button>`;
+      }
+      html += '</div></div>';
+    }
+  }
+  $('weeks').innerHTML = html;
+  renderBar();
+}
+
+function renderBar() {
+  const n = selected.size;
+  let h = 0; for (const id of selected) h += byId(id).hours;
+  $('bar').hidden = !state.open || !$('form').hidden;
+  $('sum').innerHTML = n ? `<b>${n}</b> ${n === 1 ? 'termin' : 'termina'} · ${hrs(Math.round(h * 10) / 10)}` : 'Odaberi termine';
+  $('next').disabled = !n;
+  document.querySelectorAll('[data-week]').forEach(el => {
+    const wh = weekHoursSel(+el.dataset.week);
+    el.textContent = `${hrs(wh)} / ${state.max_week} h`;
+    el.classList.toggle('full', wh >= state.max_week);
+  });
+}
+
+$('weeks').addEventListener('click', e => {
+  const btn = e.target.closest('.slot');
+  if (!btn || btn.disabled) return;
+  const s = byId(btn.dataset.id);
+  if (selected.has(s.id)) selected.delete(s.id);
+  else {
+    // one block a day: picking the other block of the same day swaps them
+    const other = [...selected].find(id => byId(id).day === s.day);
+    if (other) selected.delete(other);
+    const w = isoWeek(s.day);
+    if (weekHoursSel(w) + s.hours > state.max_week + 1e-9) {
+      if (other) selected.add(other);
+      return toast(`U ${w}. tjednu možeš imati najviše ${state.max_week} h. Ovaj termin bi to premašio.`);
+    }
+    selected.add(s.id);
+  }
+  document.querySelectorAll('.slot').forEach(b => b.setAttribute('aria-pressed', selected.has(b.dataset.id)));
+  renderBar();
+});
+
+function showForm() {
+  const list = [...selected].map(byId).sort((a, b) => a.id.localeCompare(b.id));
+  $('formChosen').innerHTML = list.map(s => `<li><span>${esc(slotLabel(s))}</span><b>${hrs(s.hours)}</b></li>`).join('');
+  $('form').hidden = false; $('bar').hidden = true; $('formErr').hidden = true;
+  $('weeks').hidden = true;
+  window.scrollTo({ top: $('form').offsetTop - 12, behavior: 'smooth' });
+  setTimeout(() => $('name').focus({ preventScroll: true }), 350);
+}
+$('next').onclick = showForm;
+
+// back to the list of shifts (for changing the choice)
+$('form').insertAdjacentHTML('afterbegin', '<p style="margin:0 0 6px"><a href="#" id="back">← Promijeni odabir</a></p>');
+document.addEventListener('click', e => {
+  if (e.target.id !== 'back') return;
+  e.preventDefault();
+  $('form').hidden = true; $('weeks').hidden = false; renderBar();
+});
+
+$('form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const err = m => { $('formErr').textContent = m; $('formErr').hidden = false; };
+  if (!$('name').value.trim().includes(' ')) return err(errorText({ error: 'name' }));
+  if ($('phone').value.replace(/\D/g, '').length < 8) return err(errorText({ error: 'phone' }));
+  if (!$('adult').checked) return err(errorText({ error: 'adult' }));
+  if (!$('consent').checked) return err(errorText({ error: 'consent' }));
+  $('send').disabled = true; $('send').textContent = 'Šaljem…';
+  const r = await api('/api/prijava', { method: 'POST', body: JSON.stringify({
+    name: $('name').value, phone: $('phone').value, slots: [...selected],
+    adult: true, consent: true, website: $('website').value }) });
+  $('send').disabled = false; $('send').textContent = 'Pošalji prijavu';
+  if (r.token) {
+    saveLink(r.token);
+    history.replaceState(null, '', '/moji/' + r.token);
+    selected.clear();
+    showMine(r, r.token, true);
+    return;
+  }
+  if (r.state) {
+    applyState(r.state);
+    if (r.error === 'full' && r.slot) selected.delete(r.slot);
+    showForm();
+  }
+  err(errorText(r));
+});
+
+function applyState(s) { state = s; clockSkew = s.now - Date.now(); render(); }
+async function refresh() {
+  const s = await api('/api/stanje');
+  if (s.slots) applyState(s);
+  return s;
+}
+
+// ---------- my shifts ----------
+function showMine(data, token, fresh) {
+  $('loading').hidden = true; $('choose').hidden = true; $('bar').hidden = true; $('mine').hidden = false;
+  const link = location.origin + '/moji/' + token;
+  $('mylink').value = link;
+  $('mineTitle').textContent = fresh ? 'Prijava je zaprimljena' : 'Tvoji termini';
+  const n = data.regs.length;
+  $('mineIntro').innerHTML = !n ? 'Na ovoj poveznici nema prijavljenih termina.'
+    : (data.name ? `${esc(data.name)}, ` : '') + (fresh
+      ? (data.manual ? 'tvoja prijava čeka potvrdu organizatora. Termini su ti rezervirani.' : 'tvoji termini su potvrđeni.')
+      : 'ovo su tvoji termini.')
+      + (data.cancel_hours > 0 ? ` Otkazati možeš najkasnije ${data.cancel_hours} h prije početka.` : '');
+  let total = 0;
+  $('mineList').innerHTML = data.regs.map(r => {
+    total += r.hours;
+    const st = r.status === 'pending' ? '<span class="status pending">čeka potvrdu</span>' : '<span class="status ok">potvrđeno</span>';
+    const btn = r.can_cancel ? `<button class="btn secondary" type="button" data-cancel="${r.id}" style="padding:8px 10px;font-size:14px">Otkaži</button>` : '';
+    return `<li><span><b>${esc(dayLabel(r.day))}</b> blok ${r.block}<br><span class="note">${r.start}–${r.end} · ${hrs(r.hours)}</span></span>
+      <span style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">${st}${btn}</span></li>`;
+  }).join('') + (n ? `<li><span>Ukupno</span><b>${hrs(Math.round(total * 10) / 10)}</b></li>` : '');
+  window.scrollTo(0, 0);
+  $('mineList').onclick = async e => {
+    const id = e.target.dataset.cancel;
+    if (!id) return;
+    const r = data.regs.find(x => String(x.id) === id);
+    if (!confirm(`Otkazati termin ${dayLabel(r.day)} blok ${r.block}?`)) return;
+    const res = await api(`/api/moji/${token}/otkazi`, { method: 'POST', body: JSON.stringify({ id: +id }) });
+    if (res.regs) { showMine(res, token, false); toast('Termin je otkazan.'); }
+    else { $('mineErr').textContent = errorText(res); $('mineErr').hidden = false; }
+  };
+}
+$('copy').onclick = async () => {
+  try { await navigator.clipboard.writeText($('mylink').value); toast('Poveznica je kopirana.'); }
+  catch { $('mylink').select(); }
+};
+
+// ---------- start ----------
+(async () => {
+  const m = location.pathname.match(/^\/moji\/([\w-]+)$/);
+  if (m) {
+    const r = await api('/api/moji/' + m[1]);
+    if (r.regs) { saveLink(m[1]); return showMine(r, m[1], false); }
+    $('loading').textContent = errorText(r);
+    return;
+  }
+  const s = await refresh();
+  if (!s.slots) { $('loading').textContent = errorText(s); return; }
+  $('loading').hidden = true; $('choose').hidden = false;
+  const links = loadLinks();
+  if (links.length) {
+    $('mylinks').hidden = false;
+    $('mylinks').innerHTML = 'Već si se prijavio/la? ' + links.map((t, i) => `<a href="/moji/${esc(t)}">Moji termini${links.length > 1 ? ' ' + (i + 1) : ''}</a>`).join(' · ');
+  }
+  renderBar();
+  // keep free places up to date, so a full shift shows as full for everyone
+  setInterval(() => { if (!document.hidden && $('form').hidden) refresh(); }, 20000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
+})();
+</script>
+</body>
+</html>

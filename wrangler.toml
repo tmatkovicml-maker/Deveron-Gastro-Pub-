@@ -1,0 +1,22 @@
+# Cloudflare Worker for the Advent shift sign-up (deployed by Cloudflare Workers Builds from this repository).
+# Set the organizer's password once in the dashboard:
+#   Workers & Pages → advent-prijave → Settings → Variables and Secrets → Add → type "Secret", name ADMIN_PASSWORD
+# Optional variable PUBLIC_URL (e.g. https://prijave.example.hr/) if the page gets its own domain: the QR code then points there.
+name = "advent-prijave"
+main = "src/index.js"
+compatibility_date = "2025-09-01"
+# Keep variables set in the dashboard (ADMIN_PASSWORD, PUBLIC_URL) when Cloudflare redeploys from GitHub
+keep_vars = true
+
+[[durable_objects.bindings]]
+name = "STORE"
+class_name = "Store"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Store"]
+
+
+# Logo and the Barlow fonts (served from here, no Google Fonts)
+[assets]
+directory = "./public"

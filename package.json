@@ -1,0 +1,17 @@
+{
+  "name": "advent-prijave",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "test": "node --test test/rules.test.js",
+    "test:server": "node test/server.test.js",
+    "qr": "node scripts/qr.js"
+  },
+  "dependencies": {
+    "qrcode-generator": "1.4.4"
+  },
+  "devDependencies": {
+    "wrangler": "4.168.0"
+  }
+}
